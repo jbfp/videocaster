@@ -1,0 +1,21 @@
+[package]
+name = "videostream"
+version = "0.1.0"
+authors = ["jbfp <jakob@jbfp.dk>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-cors = "0.5.4"
+actix-files = "0.5.0"
+actix-web = { version = "3", features = ["openssl"] }
+bytes = "1.0"
+dirs = "3.0"
+flate2 = "1.0"
+lazy_static = "1.4"
+log = "0.4"
+pretty_env_logger = "0.4"
+regex = "1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
