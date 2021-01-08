@@ -6,29 +6,21 @@ extern crate log;
 
 use actix_cors::Cors;
 use actix_files::{Files, NamedFile};
-use actix_web::{
-    client::Client,
-    dev::Body,
-    get,
-    middleware::Logger,
-    web::{Path as ActixPath, Query},
-    App, HttpResponse, HttpServer, Result as ActixResult,
-};
+use actix_web::{App, HttpResponse, HttpServer, Result as ActixResult, client::Client, dev::Body, get, middleware::Logger, web::{Data, Path as ActixPath, Query}};
 use bytes::Buf;
 use flate2::bufread::GzDecoder;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::{
-    fs::File,
-    io::{BufReader, Error as IoError, Read, Result as IoResult, Seek, SeekFrom},
-    path::{Path, PathBuf},
-};
+use std::{fs::File, io::{BufReader, Error as IoError, Read, Result as IoResult, Seek, SeekFrom}, net::{IpAddr, UdpSocket}, path::{Path, PathBuf}};
 
 #[actix_web::main]
 async fn main() -> IoResult<()> {
     pretty_env_logger::init();
 
-    HttpServer::new(|| {
+    let local_ip = get_local_ip()?;
+    info!("local ip: {}", local_ip);
+
+    HttpServer::new(move || {
         let logger = Logger::default();
 
         let cors = Cors::default()
@@ -39,6 +31,8 @@ async fn main() -> IoResult<()> {
         App::new()
             .wrap(cors)
             .wrap(logger)
+            .data(local_ip)
+            .service(ip)
             .service(fs)
             .service(video)
             .service(subtitles)
@@ -74,6 +68,11 @@ struct FsResult {
 struct Item {
     is_dir: bool,
     name: String,
+}
+
+#[get("/ip")]
+async fn ip(ip: Data<IpAddr>) -> ActixResult<HttpResponse> {
+    Ok(HttpResponse::Ok().json(ip.to_string()))
 }
 
 #[get("/fs")]
@@ -297,4 +296,13 @@ fn srt_to_vtt(srt: &str) -> String {
     }
 
     vtt
+}
+
+fn get_local_ip() -> IoResult<IpAddr> {
+    UdpSocket::bind("0.0.0.0:0")
+        .and_then(|socket| {
+            let _ = socket.connect("1.1.1.1:80");
+            socket.local_addr()
+        })
+        .map(|addr| addr.ip())
 }
