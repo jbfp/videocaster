@@ -1,0 +1,2 @@
+bin/ffmpeg/linux/ffmpeg filter=lfs diff=lfs merge=lfs -text
+bin/ffmpeg/windows/ffmpeg.exe filter=lfs diff=lfs merge=lfs -text
