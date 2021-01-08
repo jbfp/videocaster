@@ -9,43 +9,43 @@
 </head>
 
 <body>
-    <h1>Jakob's Video</h1>
+    <h1>
+        Videocaster
+        <google-cast-launcher id="cast-btn"></google-cast-launcher>
+    </h1>
 
-    <div>
-        <h2>Files</h2>
-
-        <div id="current-dir"></div>
-        <ul id="file-list"></ul>
-    </div>
-
-    <hr>
+    <div id="current-dir"></div>
+    <ul id="file-list"></ul>
 
     <div>
         <span id="selected-file"></span>
         <button id="start-btn">Reload</button>
     </div>
 
-    <hr>
+    <div id="player">
+        <div>
+            <button id="play-btn" disabled>Play</button>
+            <button id="mute-btn">Mute</button>
+            <input id="volume" type="range" min="0" max="1" value="0.5" step="0.01">
+        </div>
 
-    <div>
-        <button id="play-btn" disabled>Play</button>
-        <button id="mute-btn">Mute</button>
-        <input id="volume" type="range" min="0" max="1" value="0.5" step="0.01">
-    </div>
+        <div>
+            <input id="progress" type="range" step="1" disabled>
+            <span id="player-state"></span>
+        </div>
 
-    <div>
-        <input id="progress" type="range" step="1" disabled>
-        <span id="player-state"></span>
-    </div>
-
-    <div>
-        <span id="current-time">:</span>
-        /
-        <span id="duration">:</span>
+        <div>
+            <span id="current-time">:</span>
+            /
+            <span id="duration">:</span>
+        </div>
     </div>
 
     <footer>
-        <em id="sub-notice">Subtitles provided by <a href="https://www.opensubtitles.org" target="_blank">OpenSubtitles.org</a></em>
+        <em id="sub-notice">
+            Subtitles provided by
+            <a href="https://www.opensubtitles.org" target="_blank">OpenSubtitles.org</a>
+        </em>
     </footer>
 
     <script src="index.js"></script>

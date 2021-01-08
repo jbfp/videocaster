@@ -1,5 +1,19 @@
+body {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 16px);
+    margin: 0;
+    padding: 8px;
+}
+
 input[type="range"] {
     vertical-align: middle;
+}
+
+#cast-btn {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
 }
 
 #play-btn {
@@ -12,6 +26,11 @@ input[type="range"] {
 
 #progress {
     width: 500px;
+}
+
+#file-list {
+    flex: 1;
+    overflow-y: auto;
 }
 
 .file-list-item[data-type="dir"] {
@@ -27,4 +46,8 @@ input[type="range"] {
     display: inline-block;
     font-size: small;
     margin-top: 2em;
+}
+
+#player {
+    height: 7vh;
 }
