@@ -192,7 +192,7 @@ async fn subtitles(path: ActixPath<VideoRef>) -> ActixResult<HttpResponse> {
 
     let client = Client::new();
 
-    const USER_AGENT: &str = "VLsub 0.10.2"; // TODO: awaiting opensubtitles user agent
+    const USER_AGENT: &str = "videocaster 1.0.0";
 
     let subtitles = client
         .get(&url)
