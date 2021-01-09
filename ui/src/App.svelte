@@ -1,9 +1,9 @@
 <script lang="ts">
-    import FileList from "./src/FileList.svelte";
-    import MuteButton from "./src/MuteButton.svelte";
-    import PlayButton from "./src/PlayButton.svelte";
-    import SeekBar from "./src/SeekBar.svelte";
-    import VolumeBar from "./src/VolumeBar.svelte";
+    import FileList from "./FileList.svelte";
+    import MuteButton from "./MuteButton.svelte";
+    import PlayButton from "./PlayButton.svelte";
+    import SeekBar from "./SeekBar.svelte";
+    import VolumeBar from "./VolumeBar.svelte";
 
     const {
         CastContext,
