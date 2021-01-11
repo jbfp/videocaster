@@ -338,7 +338,7 @@
     <google-cast-launcher id="cast-btn" />
 </h1>
 
-<div>{currentDir}</div>
+<input id="current-dir" type="text" bind:value={currentDir} on:change={loadDir} />
 <div id="file-list">
     <FileList {entries} />
 </div>
