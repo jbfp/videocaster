@@ -16,6 +16,7 @@ mod video;
 use actix_cors::Cors;
 use actix_files::Files;
 use actix_web::{middleware::Logger, App, HttpServer};
+use futures::future;
 use std::io::Result as IoResult;
 
 #[actix_web::main]
@@ -47,13 +48,19 @@ async fn main() -> IoResult<()> {
 
     pin_mut!(serve, browser);
 
-    let _ = futures::future::select(serve, browser).await;
+    let _ = future::select(serve, browser).await;
 
     Ok(())
 }
 
 async fn start_google_chrome() {
-    match open::with("http://localhost:8080", "google-chrome") {
+    let chrome = if std::env::consts::OS == "windows" {
+        "chrome"
+    } else {
+        "google-chrome"
+    };
+
+    match open::with("http://localhost:8080", chrome) {
         Ok(exit) => info!("google chrome stopped with code {}", exit),
         Err(err) => error!("failed to open google chrome: {}", err),
     }
