@@ -22,6 +22,7 @@ async fn main() -> IoResult<()> {
     HttpServer::new(move || {
         let logger = Logger::default();
 
+        // these CORS options are required for subtitles to work
         let cors = Cors::default()
             .allowed_headers(vec!["Accept-Encoding", "Content-Type", "Range"])
             .allowed_methods(vec!["GET"])
