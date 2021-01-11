@@ -1,15 +1,17 @@
-use actix_web::{get, web::Data, HttpResponse, Result as ActixResult};
+use actix_web::{get, HttpResponse, Result as ActixResult};
 use std::{
     io::Result as IoResult,
     net::{IpAddr, UdpSocket},
 };
 
 #[get("/ip")]
-pub(crate) async fn handler(ip: Data<IpAddr>) -> ActixResult<HttpResponse> {
-    Ok(HttpResponse::Ok().json(ip.to_string()))
+pub(crate) async fn handler() -> ActixResult<HttpResponse> {
+    let ip = get_local_ip()?;
+    info!("local ip: {}", ip);
+    Ok(HttpResponse::Ok().json(ip))
 }
 
-pub(crate) fn get_local_ip() -> IoResult<IpAddr> {
+fn get_local_ip() -> IoResult<IpAddr> {
     UdpSocket::bind("0.0.0.0:0")
         .and_then(|socket| {
             let _ = socket.connect("1.1.1.1:80");

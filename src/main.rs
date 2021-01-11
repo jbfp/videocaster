@@ -19,9 +19,6 @@ use std::{io::Result as IoResult, path::PathBuf};
 async fn main() -> IoResult<()> {
     pretty_env_logger::init();
 
-    let local_ip = ip::get_local_ip()?;
-    info!("local ip: {}", local_ip);
-
     HttpServer::new(move || {
         let logger = Logger::default();
 
@@ -33,7 +30,6 @@ async fn main() -> IoResult<()> {
         App::new()
             .wrap(cors)
             .wrap(logger)
-            .data(local_ip)
             .service(ip::handler)
             .service(fs::handler)
             .service(video::handler)
