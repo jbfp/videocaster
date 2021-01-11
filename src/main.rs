@@ -1,4 +1,7 @@
 #[macro_use]
+extern crate futures;
+
+#[macro_use]
 extern crate lazy_static;
 
 #[macro_use]
@@ -19,7 +22,7 @@ use std::io::Result as IoResult;
 async fn main() -> IoResult<()> {
     pretty_env_logger::init();
 
-    HttpServer::new(move || {
+    let serve = HttpServer::new(move || {
         let logger = Logger::default();
 
         // these CORS options are required for subtitles to work
@@ -38,6 +41,20 @@ async fn main() -> IoResult<()> {
             .default_service(Files::new("/", "./ui/public").index_file("index.html"))
     })
     .bind(("0.0.0.0", 8080))?
-    .run()
-    .await
+    .run();
+
+    let browser = start_google_chrome();
+
+    pin_mut!(serve, browser);
+
+    let _ = futures::future::select(serve, browser).await;
+
+    Ok(())
+}
+
+async fn start_google_chrome() {
+    match open::with("http://localhost:8080", "google-chrome") {
+        Ok(exit) => info!("google chrome stopped with code {}", exit),
+        Err(err) => error!("failed to open google chrome: {}", err),
+    }
 }

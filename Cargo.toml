@@ -13,8 +13,10 @@ actix-web = { version = "3", features = ["openssl"] }
 bytes = "1.0"
 dirs = "3.0"
 flate2 = "1.0"
+futures = "0.3.9"
 lazy_static = "1.4"
 log = "0.4"
+open = "1.4"
 pretty_env_logger = "0.4"
 regex = "1"
 serde = { version = "1.0", features = ["derive"] }
