@@ -46,7 +46,7 @@ async fn main() -> IoResult<()> {
 }
 
 fn static_files() -> Files {
-    Files::new("/", "./ui").index_file("index.html")
+    Files::new("/", "./ui/public").index_file("index.html")
 }
 
 lazy_static! {

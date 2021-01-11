@@ -14,7 +14,7 @@ export default {
         sourcemap: !production,
         format: 'iife',
         name: 'app',
-        file: 'index.js'
+        file: 'public/build/index.js'
     },
     plugins: [
         svelte({

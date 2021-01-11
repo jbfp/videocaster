@@ -1,3 +1,4 @@
 /node_modules
+/public/build
 index.js
 index.js.map
