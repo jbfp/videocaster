@@ -1,4 +1,4 @@
-use crate::{VideoRef, HOME};
+use crate::common::{VideoRef, HOME};
 use actix_files::NamedFile;
 use actix_web::{get, web::Path, Result as ActixResult};
 

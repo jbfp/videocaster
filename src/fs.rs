@@ -1,3 +1,4 @@
+use crate::common::HOME;
 use actix_web::{get, web::Query, HttpResponse, Result as ActixResult};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -26,7 +27,7 @@ pub(crate) async fn handler(query: Query<FsQuery>) -> ActixResult<HttpResponse> 
     let mut path = PathBuf::new();
 
     match query.into_inner().path {
-        None => path.push(crate::HOME.as_os_str()),
+        None => path.push(HOME.as_os_str()),
         Some(inner) => path.push(inner),
     }
 
