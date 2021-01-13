@@ -10,6 +10,7 @@ extern crate log;
 mod chromecast;
 mod fs;
 mod ip;
+mod subtitles;
 
 use actix_cors::Cors;
 use actix_files::Files;
@@ -36,8 +37,11 @@ async fn main() -> IoResult<()> {
             .wrap(logger)
             .service(ip::handler)
             .service(fs::handler)
-            .service(chromecast::subtitles::handler)
+            .service(chromecast::subtitles::default_subs)
+            .service(chromecast::subtitles::get_subtitle)
             .service(chromecast::video::handler)
+            .service(subtitles::search_by_metadata)
+            .service(subtitles::search_by_path)
             .default_service(Files::new("/", "./ui/public").index_file("index.html"))
     })
     .workers(1)
@@ -65,6 +69,8 @@ async fn start_google_chrome() {
         Err(err) => error!("failed to open google chrome: {}", err),
     }
 }
+
+const OPENSUBTITLES_USER_AGENT: &str = "videocaster 1.0.0";
 
 lazy_static! {
     /// The user's $HOME dir

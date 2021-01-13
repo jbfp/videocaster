@@ -3,6 +3,7 @@
     import MuteButton from "./MuteButton.svelte";
     import PlayButton from "./PlayButton.svelte";
     import SeekBar from "./SeekBar.svelte";
+    import SubtitlePicker from "./SubtitlePicker.svelte";
     import VolumeBar from "./VolumeBar.svelte";
 
     const {
@@ -42,6 +43,14 @@
     let canSeek = true;
     let volume = 0.5;
     let isMuted = false;
+
+    enum StateKind {
+        Loading,
+        SelectingFile,
+        PickingSubtitles,
+        Ready,
+        Playing,
+    }
 
     //
     // client->server functions
@@ -109,7 +118,6 @@
                     loadDir();
                 } else {
                     selectedFile = path;
-                    loadMedia();
                 }
             },
         }));
@@ -338,12 +346,20 @@
     <google-cast-launcher id="cast-btn" />
 </h1>
 
-<input id="current-dir" type="text" bind:value={currentDir} on:change={loadDir} />
-<div id="file-list">
+<input
+    id="current-dir"
+    type="text"
+    bind:value={currentDir}
+    on:change={loadDir} />
+<div id="file-list" hidden={!!selectedFile}>
     <FileList {entries} />
 </div>
 
 <div hidden={!selectedFile}>
+    <div>
+        <SubtitlePicker path={selectedFile} />
+    </div>
+
     {selectedFile}
     <button id="start-btn" on:click={loadMedia}>Reload</button>
 </div>
