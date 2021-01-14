@@ -41,6 +41,7 @@ async fn main() -> IoResult<()> {
             .service(subtitles::handler)
             .default_service(Files::new("/", "./ui/public").index_file("index.html"))
     })
+    .workers(1)
     .bind(("0.0.0.0", 8080))?
     .run();
 
