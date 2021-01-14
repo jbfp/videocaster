@@ -46,8 +46,8 @@ async fn main() -> IoResult<()> {
 
     let browser = start_google_chrome();
 
+    // futures::future::select requires the futures to be pinned to the stack
     pin_mut!(serve, browser);
-
     let _ = future::select(serve, browser).await;
 
     Ok(())
