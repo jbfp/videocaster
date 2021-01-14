@@ -1,4 +1,4 @@
-use crate::common::HOME;
+use crate::HOME;
 use actix_web::{get, web::Query, HttpResponse, Result as ActixResult};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};

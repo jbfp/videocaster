@@ -7,17 +7,16 @@ extern crate lazy_static;
 #[macro_use]
 extern crate log;
 
-mod common;
+mod chromecast;
 mod fs;
 mod ip;
-mod subtitles;
-mod video;
 
 use actix_cors::Cors;
 use actix_files::Files;
 use actix_web::{middleware::Logger, App, HttpServer};
 use futures::future;
 use std::io::Result as IoResult;
+use std::path::PathBuf;
 
 #[actix_web::main]
 async fn main() -> IoResult<()> {
@@ -37,8 +36,8 @@ async fn main() -> IoResult<()> {
             .wrap(logger)
             .service(ip::handler)
             .service(fs::handler)
-            .service(video::handler)
-            .service(subtitles::handler)
+            .service(chromecast::subtitles::handler)
+            .service(chromecast::video::handler)
             .default_service(Files::new("/", "./ui/public").index_file("index.html"))
     })
     .workers(1)
@@ -65,4 +64,9 @@ async fn start_google_chrome() {
         Ok(exit) => info!("google chrome stopped with code {}", exit),
         Err(err) => error!("failed to open google chrome: {}", err),
     }
+}
+
+lazy_static! {
+    /// The user's $HOME dir
+    pub(crate) static ref HOME: PathBuf = dirs::home_dir().unwrap_or_else(|| "/".into());
 }

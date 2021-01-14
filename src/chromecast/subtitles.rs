@@ -1,4 +1,5 @@
-use crate::common::{VideoRef, HOME};
+use super::VideoRef;
+use crate::HOME;
 use actix_web::{client::Client, dev::Body, get, web::Path, HttpResponse, Result as ActixResult};
 use bytes::Buf;
 use flate2::bufread::GzDecoder;
