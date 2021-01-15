@@ -1,7 +1,11 @@
 use crate::HOME;
 use actix_web::{get, web::Query, HttpResponse, Result as ActixResult};
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, fs::DirEntry, path::PathBuf};
+use std::{
+    cmp::Ordering,
+    fs::DirEntry,
+    path::{Path, PathBuf},
+};
 
 const VALID_EXTENSIONS: [&str; 3] = [".avi", ".mkv", ".mp4"];
 const PARENT: &str = "..";
@@ -34,7 +38,8 @@ struct FsResult {
 
 #[get("/fs")]
 pub(crate) async fn handler(query: Query<FsQuery>) -> ActixResult<HttpResponse> {
-    let path = default_path(query.path.as_deref());
+    let path = default_path(query.path.as_deref()).canonicalize()?;
+    let real_path = path.display().to_string();
 
     let mut items = std::fs::read_dir(&path)?
         .into_iter()
@@ -44,28 +49,16 @@ pub(crate) async fn handler(query: Query<FsQuery>) -> ActixResult<HttpResponse> 
 
     items.sort_unstable_by(sorting);
 
-    // if we can go up...
-    if path.parent().is_some() {
-        // ... insert parent directory
-        items.insert(0, PARENT_ITEM.clone());
-    }
-
-    let real_path = path.canonicalize()?.display().to_string();
-
-    info!("{}", real_path);
+    // insert parent ".." if applicable
+    get_parent(&path)
+        .into_iter()
+        .for_each(|parent| items.insert(0, parent));
 
     Ok(HttpResponse::Ok().json(FsResult { items, real_path }))
 }
 
 fn default_path(path: Option<&str>) -> PathBuf {
-    let mut buf = PathBuf::new();
-
-    match path {
-        None => buf.push(HOME.as_os_str()),
-        Some(inner) => buf.push(inner),
-    }
-
-    buf
+    path.map_or_else(|| HOME.clone(), PathBuf::from)
 }
 
 fn entry_to_item(entry: DirEntry) -> Option<Item> {
@@ -93,15 +86,15 @@ fn entry_to_item(entry: DirEntry) -> Option<Item> {
 }
 
 fn ignore(name: &str, is_file: bool) -> bool {
+    fn is_hidden(s: &str) -> bool {
+        s.starts_with('.')
+    }
+
+    fn has_correct_ext(s: &str) -> bool {
+        VALID_EXTENSIONS.iter().any(|ext| s.ends_with(ext))
+    }
+
     is_hidden(name) || (is_file && !has_correct_ext(name))
-}
-
-fn is_hidden(s: &str) -> bool {
-    s.starts_with('.')
-}
-
-fn has_correct_ext(s: &str) -> bool {
-    VALID_EXTENSIONS.iter().any(|ext| s.ends_with(ext))
 }
 
 fn sorting(a: &Item, b: &Item) -> Ordering {
@@ -109,6 +102,10 @@ fn sorting(a: &Item, b: &Item) -> Ordering {
     b.is_dir
         .cmp(&a.is_dir)
         .then(a.name.to_lowercase().cmp(&b.name.to_lowercase()))
+}
+
+fn get_parent(path: &Path) -> Option<Item> {
+    path.parent().map(|_| PARENT_ITEM.clone())
 }
 
 #[cfg(test)]
@@ -133,17 +130,19 @@ mod tests {
         }
     }
 
-    mod is_hidden {
-        use super::is_hidden;
+    mod ignore {
+        use super::ignore;
+        use test_case::test_case;
 
-        #[test]
-        fn starts_with_dot() {
-            assert!(is_hidden(".test"));
-        }
-
-        #[test]
-        fn does_not_start_with_dot() {
-            assert!(!is_hidden("test.mp4"));
+        #[test_case(".test", false => true; "when dir starts with dot")]
+        #[test_case(".test", true => true; "when file starts with dot")]
+        #[test_case("video", false => false; "when dir does not start with dot")]
+        #[test_case("video", true => true; "when file does not start with dot but has incorrect ext")]
+        #[test_case("video.avi", true => false; "when file does not start with dot and has avi ext")]
+        #[test_case("video.mkv", true => false; "when file does not start with dot and has mkv ext")]
+        #[test_case("video.mp4", true => false; "when file does not start with dot and has mp4 ext")]
+        fn works(name: &str, is_file: bool) -> bool {
+            ignore(name, is_file)
         }
     }
 
