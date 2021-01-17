@@ -40,7 +40,7 @@ async fn main() -> Result<()> {
 }
 
 async fn start_rocket() {
-    let static_files = StaticFiles::from(crate_relative!("/ui/public"));
+    let static_files = StaticFiles::from(crate_relative!("/www/public"));
 
     let routes = routes![
         chromecast::subtitles::default_subs,
