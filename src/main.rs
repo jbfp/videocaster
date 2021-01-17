@@ -15,6 +15,7 @@ extern crate rocket;
 mod chromecast;
 mod fs;
 mod ip;
+mod opensubs;
 mod subtitles;
 
 use anyhow::Result;
@@ -48,8 +49,8 @@ async fn start_rocket() {
         chromecast::video::handler,
         fs::handler,
         ip::handler,
-        subtitles::search_by_metadata,
-        subtitles::search_by_path
+        subtitles::by_metadata::handler,
+        subtitles::by_path::handler
     ];
 
     let cors = CorsOptions {
@@ -86,8 +87,6 @@ fn start_google_chrome() -> JoinHandle<()> {
         }
     })
 }
-
-const OPENSUBTITLES_USER_AGENT: &str = "videocaster 1.0.0";
 
 lazy_static! {
     /// The user's $HOME dir
