@@ -1,3 +1,5 @@
+#![feature(proc_macro_hygiene, decl_macro)]
+
 #[macro_use]
 extern crate futures;
 
@@ -7,67 +9,82 @@ extern crate lazy_static;
 #[macro_use]
 extern crate log;
 
+#[macro_use]
+extern crate rocket;
+
 mod chromecast;
 mod fs;
 mod ip;
 mod subtitles;
 
-use actix_cors::Cors;
-use actix_files::Files;
-use actix_web::{middleware::Logger, App, HttpServer};
+use anyhow::Result;
 use futures::future;
-use std::io::Result as IoResult;
+use rocket::http::Method;
+use rocket_contrib::{crate_relative, serve::StaticFiles};
+use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 use std::path::PathBuf;
+use tokio::task::{self, JoinHandle};
 
-#[actix_web::main]
-async fn main() -> IoResult<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     pretty_env_logger::init();
 
-    let serve = HttpServer::new(move || {
-        let logger = Logger::default();
-
-        // these CORS options are required for subtitles to work
-        let cors = Cors::default()
-            .allowed_headers(vec!["Accept-Encoding", "Content-Type", "Range"])
-            .allowed_methods(vec!["GET"])
-            .allowed_origin("https://www.gstatic.com");
-
-        App::new()
-            .wrap(cors)
-            .wrap(logger)
-            .service(ip::handler)
-            .service(fs::handler)
-            .service(chromecast::subtitles::default_subs)
-            .service(chromecast::subtitles::get_subtitle)
-            .service(chromecast::video::handler)
-            .service(subtitles::search_by_metadata)
-            .service(subtitles::search_by_path)
-            .default_service(Files::new("/", "./ui/public").index_file("index.html"))
-    })
-    .workers(1)
-    .bind(("0.0.0.0", 8080))?
-    .run();
-
+    let server = start_rocket();
     let browser = start_google_chrome();
 
     // futures::future::select requires the futures to be pinned to the stack
-    pin_mut!(serve, browser);
-    let _ = future::select(serve, browser).await;
+    pin_mut!(server, browser);
+    let _ = future::select(server, browser).await;
 
     Ok(())
 }
 
-async fn start_google_chrome() {
-    let chrome = if std::env::consts::OS == "windows" {
-        "chrome"
-    } else {
-        "google-chrome"
-    };
+async fn start_rocket() {
+    let static_files = StaticFiles::from(crate_relative!("/ui/public"));
 
-    match open::with("http://localhost:8080", chrome) {
-        Ok(exit) => info!("google chrome stopped with code {}", exit),
-        Err(err) => error!("failed to open google chrome: {}", err),
+    let routes = routes![
+        chromecast::subtitles::default_subs,
+        chromecast::subtitles::get_subtitle,
+        chromecast::video::handler,
+        fs::handler,
+        ip::handler,
+        subtitles::search_by_metadata,
+        subtitles::search_by_path
+    ];
+
+    let cors = CorsOptions {
+        allowed_origins: AllowedOrigins::some_exact(&["https://www.gstatic.com"]),
+        allowed_methods: vec![Method::Get].into_iter().map(From::from).collect(),
+        allowed_headers: AllowedHeaders::some(&["Accept-Encoding", "Content-Type", "Range"]),
+        ..Default::default()
     }
+    .to_cors()
+    .expect("CORS options are invalid");
+
+    let fut = rocket::ignite()
+        .mount("/", routes)
+        .mount("/", static_files)
+        .attach(cors)
+        .launch();
+
+    if let Err(err) = fut.await {
+        error!("Rocket failed to launch: {}", err);
+    }
+}
+
+fn start_google_chrome() -> JoinHandle<()> {
+    task::spawn_blocking(|| {
+        let chrome = if std::env::consts::OS == "windows" {
+            "chrome"
+        } else {
+            "google-chrome"
+        };
+
+        match open::with("http://localhost:8000", chrome) {
+            Ok(exit) => info!("google chrome stopped with code {}", exit),
+            Err(err) => error!("failed to open google chrome: {}", err),
+        }
+    })
 }
 
 const OPENSUBTITLES_USER_AGENT: &str = "videocaster 1.0.0";

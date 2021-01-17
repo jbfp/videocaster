@@ -1,19 +1,12 @@
 //! These modules provide handlers for the Chromecast to connect to
 //! such as loading videos and downloading subtitles.
-use serde::Deserialize;
+
+use percent_encoding::percent_decode_str;
+use rocket::http::RawStr;
 
 pub mod subtitles;
 pub mod video;
 
-// chromecast does not pass query parameters from the client to the server
-// so we have to pass it as path parameters in escaped format
-#[derive(Deserialize)]
-pub(crate) struct VideoRef {
-    escaped_path: String,
-}
-
-impl VideoRef {
-    pub(crate) fn unescape(&self) -> String {
-        self.escaped_path.replace("%2E", ".").replace("%2F", "/")
-    }
+fn unescape(s: &RawStr) -> String {
+    percent_decode_str(s).decode_utf8_lossy().to_string()
 }

@@ -1,6 +1,8 @@
 use crate::HOME;
-use actix_web::{get, web::Query, HttpResponse, Result as ActixResult};
-use serde::{Deserialize, Serialize};
+use anyhow::Error;
+use rocket::response::Debug;
+use rocket_contrib::json::Json;
+use serde::Serialize;
 use std::{
     cmp::Ordering,
     fs::DirEntry,
@@ -17,11 +19,6 @@ lazy_static! {
     };
 }
 
-#[derive(Deserialize)]
-pub(crate) struct FsQuery {
-    path: Option<String>,
-}
-
 #[derive(Clone, Serialize)]
 #[serde(rename_all(serialize = "camelCase"))]
 struct Item {
@@ -31,14 +28,19 @@ struct Item {
 
 #[derive(Serialize)]
 #[serde(rename_all(serialize = "camelCase"))]
-struct FsResult {
+pub(crate) struct FsResult {
     items: Vec<Item>,
     real_path: String,
 }
 
-#[get("/fs")]
-pub(crate) async fn handler(query: Query<FsQuery>) -> ActixResult<HttpResponse> {
-    let path = default_path(query.path.as_deref()).canonicalize()?;
+#[get("/fs?<path>")]
+pub(crate) async fn handler(path: Option<String>) -> Result<Json<FsResult>, Debug<Error>> {
+    Ok(Json(run(path.as_deref())?))
+}
+
+fn run(path: Option<&str>) -> Result<FsResult, Error> {
+    let path = default_path(path).canonicalize()?;
+
     let real_path = path.display().to_string();
 
     let mut items = std::fs::read_dir(&path)?
@@ -54,7 +56,7 @@ pub(crate) async fn handler(query: Query<FsQuery>) -> ActixResult<HttpResponse> 
         .into_iter()
         .for_each(|parent| items.insert(0, parent));
 
-    Ok(HttpResponse::Ok().json(FsResult { items, real_path }))
+    Ok(FsResult { items, real_path })
 }
 
 fn default_path(path: Option<&str>) -> PathBuf {

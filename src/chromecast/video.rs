@@ -1,15 +1,22 @@
-use super::VideoRef;
+use super::unescape;
 use crate::HOME;
-use actix_files::NamedFile;
-use actix_web::{get, web::Path, Result as ActixResult};
+use anyhow::Error;
+use rocket::{http::RawStr, response::Debug};
+use tokio::fs::File;
 
-#[get("/video/{escaped_path}")]
-pub(crate) async fn handler(path: Path<VideoRef>) -> ActixResult<NamedFile> {
+#[get("/video/<path>")]
+pub(crate) async fn handler(path: &RawStr) -> Result<File, Debug<Error>> {
+    let path = unescape(path);
+    Ok(run(&path).await?)
+}
+
+async fn run(path: &str) -> Result<File, Error> {
     let mut root = HOME.clone();
-    root.push(path.into_inner().unescape());
+    root.push(path);
     let root = root.canonicalize()?;
     let path = root.as_path();
+
     info!("loading video at {:#?}", path);
-    let file = NamedFile::open(path)?;
-    Ok(file)
+
+    Ok(File::open(path).await?)
 }

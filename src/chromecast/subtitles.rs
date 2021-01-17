@@ -1,48 +1,55 @@
-use std::io::Read;
-
+use super::unescape;
 use crate::OPENSUBTITLES_USER_AGENT;
-use actix_web::{client::Client, dev::Body, get, web::Path, HttpResponse, Result as ActixResult};
+use anyhow::Error;
 use bytes::Buf;
 use flate2::bufread::GzDecoder;
 use regex::Regex;
-use serde::Deserialize;
+use reqwest::ClientBuilder;
+use rocket::http::{ContentType, RawStr};
+use rocket::response::{Content, Debug};
+use std::io::Read;
+
+lazy_static! {
+    static ref VTT_CONTENT_TYPE: ContentType = ContentType::new("text", "vtt");
+}
 
 const NO_SUBTITLES_FOUND: &str = r"WEBVTT
 
 00:00:00.000 --> 00:00:15.000
 No subtitles found";
 
-#[derive(Deserialize)]
-pub(crate) struct SubtitleRef {
-    url: String,
+#[get("/subtitles/download/<url>")]
+pub(crate) async fn get_subtitle(url: &RawStr) -> Result<Content<String>, Debug<Error>> {
+    let url = unescape(url);
+    let vtt = run (&url).await?;
+    Ok(Content(VTT_CONTENT_TYPE.clone(), vtt))
 }
 
-#[get("/subtitles/download/{escaped_path}")]
-pub(crate) async fn get_subtitle(path: Path<SubtitleRef>) -> ActixResult<HttpResponse> {
-    info!("downloading subs from {}", path.url);
+async fn run(url: &str) -> Result<String, Error> {
+    info!("downloading subs from {}", url);
 
-    let buf = Client::new()
-        .get(&path.url)
-        .header("User-Agent", OPENSUBTITLES_USER_AGENT)
+    let buf = ClientBuilder::new()
+        .user_agent(OPENSUBTITLES_USER_AGENT)
+        .build()?
+        .get(url)
         .send()
         .await?
-        .body()
+        .bytes()
         .await?;
 
-    trace!("unzipping {} bytes", buf.len());
+    let size = buf.len();
+    trace!("unzipping {} bytes", size);
     let mut gz = GzDecoder::new(buf.reader());
-    let mut buf = String::with_capacity(buf.len() * 2);
+    let mut buf = String::with_capacity(size * 2);
     gz.read_to_string(&mut buf)?;
 
-    trace!("converting srt ({} bytes) to vtt", buf.len());
-    let vtt = srt_to_vtt(&buf);
-
-    Ok(vtt_to_http_response(vtt))
+    trace!("converting srt ({} bytes) to vtt", size);
+    Ok(srt_to_vtt(&buf))
 }
 
 #[get("/subtitles/default")]
-pub(crate) async fn default_subs() -> HttpResponse {
-    vtt_to_http_response(NO_SUBTITLES_FOUND)
+pub(crate) async fn default_subs() -> Content<&'static str> {
+    Content(VTT_CONTENT_TYPE.clone(), NO_SUBTITLES_FOUND)
 }
 
 // https://raw.githubusercontent.com/nwoltman/srt-to-vtt-converter/master/SRT%20to%20VTT%20Converter/SubtitleConverter.cs
@@ -77,10 +84,4 @@ fn srt_to_vtt(srt: &str) -> String {
     }
 
     vtt
-}
-
-fn vtt_to_http_response<T: Into<Body>>(vtt: T) -> HttpResponse {
-    HttpResponse::Ok()
-        .set_header("Content-Type", "text/vtt")
-        .body(vtt)
 }
