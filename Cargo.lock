@@ -752,15 +752,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13bd41f508810a131401606d54ac32a467c97172d74ba7662562ebba5ad07fa0"
 
 [[package]]
-name = "open"
-version = "1.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c283bf0114efea9e42f1a60edea9859e8c47528eae09d01df4b29c1e489cc48"
-dependencies = [
- "winapi",
-]
-
-[[package]]
 name = "openssl"
 version = "0.10.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1821,7 +1812,6 @@ dependencies = [
  "futures",
  "lazy_static",
  "log",
- "open",
  "packer",
  "percent-encoding",
  "pretty_env_logger",

@@ -26,12 +26,8 @@ use rocket::{
     Response,
 };
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
-use std::{
-    env::{consts, var},
-    io::Cursor,
-    path::PathBuf,
-};
-use tokio::task::{self, JoinHandle};
+use std::{env::var, io::Cursor, path::PathBuf};
+use tokio::process::Command;
 
 lazy_static! {
     /// The user's $HOME dir
@@ -80,20 +76,19 @@ async fn start_rocket() {
     }
 }
 
-fn start_google_chrome() -> JoinHandle<()> {
-    let chrome = if consts::OS == "windows" {
-        "chrome"
-    } else {
-        "google-chrome"
-    };
-
+async fn start_google_chrome() {
     let port = var("ROCKET_PORT").unwrap_or_else(|_| "8000".into());
     let url = format!("http://localhost:{}", port);
+    let cmd = if cfg!(target_os = "windows") {
+        Command::new("chrome").arg(&url).status()
+    } else {
+        Command::new("google-chrome").arg(&url).status()
+    };
 
-    task::spawn_blocking(move || match open::with(url, chrome) {
+    match cmd.await {
         Ok(exit) => info!("google chrome stopped with code {}", exit),
         Err(err) => error!("failed to open google chrome: {}", err),
-    })
+    }
 }
 
 #[derive(Packer)]
