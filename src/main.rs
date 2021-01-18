@@ -1,9 +1,6 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
 #[macro_use]
-extern crate futures;
-
-#[macro_use]
 extern crate lazy_static;
 
 #[macro_use]
@@ -34,17 +31,12 @@ lazy_static! {
     pub(crate) static ref HOME: PathBuf = dirs::home_dir().unwrap_or_else(|| "/".into());
 }
 
-#[tokio::main]
+#[rocket::main]
 async fn main() -> Result<()> {
     pretty_env_logger::try_init()?;
-
-    let server = start_rocket();
-    let browser = start_google_chrome();
-
-    // futures::future::select requires the futures to be pinned to the stack
-    pin_mut!(server, browser);
-    let _ = future::select(server, browser).await;
-
+    let rocket = start_rocket();
+    let chrome = start_google_chrome();
+    future::join(rocket, chrome).await;
     Ok(())
 }
 
