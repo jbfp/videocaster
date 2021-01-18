@@ -15,12 +15,13 @@ futures = "0.3.9"
 lazy_static = "1.4"
 log = "0.4"
 open = "1.4"
+packer = "0.5.3"
 percent-encoding = "2.1.0"
 pretty_env_logger = "0.4"
 regex = "1"
 reqwest = { version ="0.11.0", features = ["json"] }
 rocket = "0.5.0-dev"
-rocket_contrib = { version = "0.5.0-dev", default-features = false, features = ["json", "serve"] }
+rocket_contrib = { version = "0.5.0-dev", default-features = false, features = ["json"] }
 rocket_cors = { version = "0.5.2", default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"

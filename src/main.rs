@@ -20,11 +20,15 @@ mod subtitles;
 
 use anyhow::Result;
 use futures::future;
-use rocket::http::Method;
-use rocket_contrib::{crate_relative, serve::StaticFiles};
+use packer::Packer;
+use rocket::{
+    http::{ContentType, Method, Status},
+    Response,
+};
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 use std::{
     env::{consts, var},
+    io::Cursor,
     path::PathBuf,
 };
 use tokio::task::{self, JoinHandle};
@@ -49,15 +53,15 @@ async fn main() -> Result<()> {
 }
 
 async fn start_rocket() {
-    let static_files = StaticFiles::from(crate_relative!("/www/public"));
-
     let routes = routes![
         chromecast::subtitles::handler,
         chromecast::video::handler,
         fs::handler,
         ip::handler,
         subtitles::by_metadata::handler,
-        subtitles::by_path::handler
+        subtitles::by_path::handler,
+        index,
+        static_files
     ];
 
     let cors = CorsOptions {
@@ -69,11 +73,7 @@ async fn start_rocket() {
     .to_cors()
     .expect("CORS options are invalid");
 
-    let fut = rocket::ignite()
-        .mount("/", routes)
-        .mount("/", static_files)
-        .attach(cors)
-        .launch();
+    let fut = rocket::ignite().mount("/", routes).attach(cors).launch();
 
     if let Err(err) = fut.await {
         error!("Rocket failed to launch: {}", err);
@@ -94,4 +94,47 @@ fn start_google_chrome() -> JoinHandle<()> {
         Ok(exit) => info!("google chrome stopped with code {}", exit),
         Err(err) => error!("failed to open google chrome: {}", err),
     })
+}
+
+#[derive(Packer)]
+#[packer(source = "www/public")]
+struct StaticFiles;
+
+#[get("/", rank = 10)]
+fn index() -> Response<'static> {
+    get_file("index.html".into(), Some(ContentType::HTML))
+}
+
+#[get("/<path..>", rank = 10)]
+fn static_files(path: PathBuf) -> Response<'static> {
+    get_file(path, None)
+}
+
+fn get_file(path: PathBuf, content_type: Option<ContentType>) -> Response<'static> {
+    let full_path = format!("www/public/{}", path.display());
+    let file: Option<&'static [u8]> = StaticFiles::get(&full_path);
+
+    let mut response = Response::build();
+
+    if let Some(file) = file {
+        response.status(Status::Ok);
+
+        let size = file.len();
+        let cursor = Cursor::new(file);
+        response.sized_body(size, cursor);
+
+        if let Some(content_type) = content_type {
+            response.header(content_type);
+        } else if let Some(ext) = path.extension() {
+            let ext_str = ext.to_string_lossy();
+
+            if let Some(content_type) = ContentType::from_extension(&ext_str) {
+                response.header(content_type);
+            }
+        }
+    } else {
+        response.status(Status::NotFound);
+    }
+
+    response.finalize()
 }
