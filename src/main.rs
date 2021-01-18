@@ -52,8 +52,7 @@ async fn start_rocket() {
     let static_files = StaticFiles::from(crate_relative!("/www/public"));
 
     let routes = routes![
-        chromecast::subtitles::default_subs,
-        chromecast::subtitles::get_subtitle,
+        chromecast::subtitles::handler,
         chromecast::video::handler,
         fs::handler,
         ip::handler,
