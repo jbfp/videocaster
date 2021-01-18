@@ -1,10 +1,9 @@
-use super::Subtitle;
+use super::{Subtitle, DEFAULT_LANG};
 use crate::{opensubs, HOME};
 use anyhow::Error;
 use rocket::response::Debug;
 use rocket_contrib::json::Json;
 use std::{
-    fs::Metadata,
     io::SeekFrom,
     path::{Path, PathBuf},
 };
@@ -14,23 +13,14 @@ use tokio::{
 };
 
 #[get("/subtitles/by-path?<path>")]
-pub(crate) async fn handler(
-    path: String,
-) -> Result<Json<Vec<Subtitle>>, Debug<Error>> {
+pub(crate) async fn handler(path: String) -> Result<Json<Vec<Subtitle>>, Debug<Error>> {
     let path = build_path(&path)?;
-
-    info!("loading subtitles for {:#?}", path);
-
+    info!("loading subtitles for {}", path.display());
     let mut file = open_file(&path).await?;
-    let metadata = metadata(&file).await?;
-    let size = metadata.len();
+    let size = file_size(&file).await?;
     let hash = create_hash(&mut file, size).await?;
-    let lang = "eng";
-    let url = format!(
-        "https://rest.opensubtitles.org/search/moviebytesize-{}/moviehash-{}/sublanguageid-{}",
-        size, hash, lang
-    );
-
+    let url = format_url(size, &hash);
+    trace!("file size: {}, hash: {}", size, hash);
     let subtitles = opensubs::download_subtitles(&url).await?;
     info!("found {} subtitles", subtitles.len());
     Ok(Json(subtitles))
@@ -46,8 +36,8 @@ async fn open_file<P: AsRef<Path>>(path: &P) -> Result<File, Error> {
     Ok(File::open(path).await?)
 }
 
-async fn metadata(file: &File) -> Result<Metadata, Error> {
-    Ok(file.metadata().await?)
+async fn file_size(file: &File) -> Result<u64, Error> {
+    Ok(file.metadata().await.map(|md| md.len())?)
 }
 
 // https://trac.opensubtitles.org/projects/opensubtitles/wiki/HashSourceCodes#RUST
@@ -74,4 +64,11 @@ async fn create_hash(file: &mut File, size: u64) -> Result<String, Error> {
     }
 
     Ok(format!("{:01$x}", hash, 16))
+}
+
+fn format_url(size: u64, hash: &str) -> String {
+    format!(
+        "https://rest.opensubtitles.org/search/moviebytesize-{}/moviehash-{}/sublanguageid-{}",
+        size, hash, DEFAULT_LANG
+    )
 }

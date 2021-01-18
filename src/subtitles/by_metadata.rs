@@ -11,7 +11,14 @@ pub(crate) async fn handler(
     season: Option<usize>,
     episode: Option<usize>,
 ) -> Result<Json<Vec<Subtitle>>, Debug<Error>> {
-    let title = utf8_percent_encode(&title, NON_ALPHANUMERIC).to_string();
+    let url = format_url(title, season, episode);
+    let subtitles = opensubs::download_subtitles(&url).await?;
+    info!("found {} subtitles", subtitles.len());
+    Ok(Json(subtitles))
+}
+
+fn format_url(title: String, season: Option<usize>, episode: Option<usize>) -> String {
+    let title = utf8_percent_encode(&title, NON_ALPHANUMERIC);
 
     let mut url = format!(
         "https://rest.opensubtitles.org/search/query-{}/sublanguageid-{}",
@@ -26,7 +33,5 @@ pub(crate) async fn handler(
         url.push_str(&format!("/episode-{}", episode));
     }
 
-    let subtitles = opensubs::download_subtitles(&url).await?;
-    info!("found {} subtitles", subtitles.len());
-    Ok(Json(subtitles))
+    url
 }
