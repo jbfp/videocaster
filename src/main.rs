@@ -23,7 +23,10 @@ use futures::future;
 use rocket::http::Method;
 use rocket_contrib::{crate_relative, serve::StaticFiles};
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
-use std::path::PathBuf;
+use std::{
+    env::{consts, var},
+    path::PathBuf,
+};
 use tokio::task::{self, JoinHandle};
 
 lazy_static! {
@@ -79,16 +82,17 @@ async fn start_rocket() {
 }
 
 fn start_google_chrome() -> JoinHandle<()> {
-    task::spawn_blocking(|| {
-        let chrome = if std::env::consts::OS == "windows" {
-            "chrome"
-        } else {
-            "google-chrome"
-        };
+    let chrome = if consts::OS == "windows" {
+        "chrome"
+    } else {
+        "google-chrome"
+    };
 
-        match open::with("http://localhost:8000", chrome) {
-            Ok(exit) => info!("google chrome stopped with code {}", exit),
-            Err(err) => error!("failed to open google chrome: {}", err),
-        }
+    let port = var("ROCKET_PORT").unwrap_or_else(|_| "8000".into());
+    let url = format!("http://localhost:{}", port);
+
+    task::spawn_blocking(move || match open::with(url, chrome) {
+        Ok(exit) => info!("google chrome stopped with code {}", exit),
+        Err(err) => error!("failed to open google chrome: {}", err),
     })
 }
