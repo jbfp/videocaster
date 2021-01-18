@@ -26,6 +26,11 @@ use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 use std::path::PathBuf;
 use tokio::task::{self, JoinHandle};
 
+lazy_static! {
+    /// The user's $HOME dir
+    pub(crate) static ref HOME: PathBuf = dirs::home_dir().unwrap_or_else(|| "/".into());
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     pretty_env_logger::init();
@@ -86,9 +91,4 @@ fn start_google_chrome() -> JoinHandle<()> {
             Err(err) => error!("failed to open google chrome: {}", err),
         }
     })
-}
-
-lazy_static! {
-    /// The user's $HOME dir
-    pub(crate) static ref HOME: PathBuf = dirs::home_dir().unwrap_or_else(|| "/".into());
 }
