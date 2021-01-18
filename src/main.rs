@@ -80,7 +80,9 @@ async fn start_google_chrome() {
     let port = var("ROCKET_PORT").unwrap_or_else(|_| "8000".into());
     let url = format!("http://localhost:{}", port);
     let cmd = if cfg!(target_os = "windows") {
-        Command::new("chrome").arg(&url).status()
+        Command::new("cmd")
+            .args(&["/C", "start", "chrome", &url])
+            .status()
     } else {
         Command::new("google-chrome").arg(&url).status()
     };
