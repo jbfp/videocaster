@@ -12,12 +12,6 @@
     }
 </script>
 
-<style>
-    button {
-        width: 72px;
-    }
-</style>
-
 <button on:click={muteOrUnmute}>
     {text}
 </button>

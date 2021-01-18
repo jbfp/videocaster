@@ -15,9 +15,12 @@
             ? "Pause"
             : playerState === PlayerState.PAUSED
             ? "Play"
-            : "";
+            : playerState === PlayerState.BUFFERING
+            ? "Buffering"
+            : "‎";
 
     $: disabled =
+        !playerState ||
         playerState === PlayerState.IDLE ||
         playerState === PlayerState.BUFFERING;
 
@@ -28,10 +31,5 @@
     }
 </script>
 
-<style>
-    button {
-        width: 64px;
-    }
-</style>
+<button {disabled} on:click={playOrPause}>{text}</button>
 
-<button {disabled} on:click={playOrPause}> {text} </button>

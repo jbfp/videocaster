@@ -33,6 +33,7 @@
 </style>
 
 <input
+    title="Seek"
     type="range"
     step="1"
     disabled={!canSeek}

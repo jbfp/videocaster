@@ -1,14 +1,45 @@
 body {
-    margin: 0;
-}
-
-#app {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 16px);
-    padding: 8px;
+    height: calc(100vh - 2em);
+    margin: 0;
+    padding: 1em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 0;
 }
 
 input[type="range"] {
-    vertical-align: bottom;
+    vertical-align: middle;
+}
+
+input[type="text"] {
+    width: 100%;
+}
+
+select {
+    width: 100%;
+}
+
+button {
+    height: 25px;
+    width: 75px;
+}
+
+google-cast-launcher {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+}
+
+main {
+    flex: 1 0;
+}
+
+#sub-notice {
+    color: #666666;
+    display: inline-block;
+    font-size: small;
+    margin-top: 2em;
 }
