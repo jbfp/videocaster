@@ -36,7 +36,7 @@ lazy_static! {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    pretty_env_logger::init();
+    pretty_env_logger::try_init()?;
 
     let server = start_rocket();
     let browser = start_google_chrome();
