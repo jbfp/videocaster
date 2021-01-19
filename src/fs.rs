@@ -39,9 +39,10 @@ pub(crate) async fn handler(path: Option<String>) -> Result<Json<FsResult>, Debu
 }
 
 fn run(path: Option<&str>) -> Result<FsResult, Error> {
-    let path = default_path(path).canonicalize()?;
+    let path = default_path(path);
+    let path = dunce::canonicalize(path)?;
 
-    let real_path = path.display().to_string();
+    trace!("canonical path: {:#?}", path);
 
     let mut items = std::fs::read_dir(&path)?
         .into_iter()
@@ -56,6 +57,8 @@ fn run(path: Option<&str>) -> Result<FsResult, Error> {
         .into_iter()
         .for_each(|parent| items.insert(0, parent));
 
+    let real_path = path.display().to_string();
+
     Ok(FsResult { items, real_path })
 }
 
@@ -64,6 +67,8 @@ fn default_path(path: Option<&str>) -> PathBuf {
 }
 
 fn entry_to_item(entry: DirEntry) -> Option<Item> {
+    trace!("entry to item for {:#?}", entry);
+
     match entry.file_type() {
         Err(err) => {
             info!("failed to get file type: {}", err);
