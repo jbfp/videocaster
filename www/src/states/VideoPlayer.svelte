@@ -35,7 +35,7 @@
     export let filePath: string;
     export let subtitlesUrl: string | null;
 
-    $: fileName = filePath.split("/").pop();
+    $: fileName = filePath.split("__sep").pop();
     $: videoPath = `/video/${encodeURIComponent(filePath)}`;
     $: subtitlesPath = subtitlesUrl
         ? `/subtitles/download/${encodeURIComponent(subtitlesUrl)}`
@@ -254,7 +254,7 @@
     }
 </script>
 
-<h2>Now Playing &OpenCurlyDoubleQuote;{fileName}&CloseCurlyDoubleQuote;</h2>
+<h2>Now Playing <code>{fileName}</code></h2>
 
 <div class="controls">
     <PlayButton {playerState} on:playOrPause={playOrPause} />
