@@ -19,7 +19,8 @@
     const regex = /(.+)[sS](\d{1,2})[eE](\d{1,2}).*/;
 
     onMount(() => {
-        const split = filePath.split("/");
+        const separator = "__sep"; // replaced at compile time
+        const split = filePath.split(separator);
         const fileName = split[split.length - 1];
         const result = regex.exec(fileName);
 
