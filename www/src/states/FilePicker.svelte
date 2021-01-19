@@ -2,35 +2,59 @@
     import { onMount, createEventDispatcher } from "svelte";
     import * as server from "../server";
 
-    const separator = "__sep"; // replaced at compile time
-
-    let currentDir: string | null = null;
-    let selectedFile: string | null = null;
-    let entries: {
+    interface Entry {
         name: string;
         path: string;
         type: "dir" | "file";
+        href: string;
         onClick(): void;
-    }[] = [];
+    }
+
+    let currentDir: string | null = null;
+    let selectedFile: string | null = null;
+    let entries: Entry[] = [];
+
+    $: fileName = selectedFile?.replace(currentDir, "")?.replace(/^\\/, "");
 
     const dispatch = createEventDispatcher();
 
-    onMount(loadDir);
+    onMount(() => {
+        const hash = decodeURIComponent(location.hash.slice(1));
+
+        if (hash) {
+            const separator = "__sep"; // replaced at compile time
+            const split = hash.split(separator);
+            const len = split.length;
+
+            if (len > 0 && split[len - 1].includes(".")) {
+                currentDir = split.slice(0, len - 1).join(separator);
+                selectedFile = hash;
+            } else {
+                currentDir = hash;
+            }
+        }
+
+        loadDir();
+    });
 
     async function loadDir() {
         const dir = await server.loadDirectoryAsync(currentDir);
         currentDir = dir.realPath;
+        history.replaceState("", "", `#${currentDir}`);
         entries = dir.items.map(({ isDir, name, path }) => ({
             name,
             path,
             type: isDir ? "dir" : "file",
+            href: `#${path}`,
 
             onClick() {
                 if (isDir) {
                     currentDir = path;
+                    selectedFile = null;
                     loadDir();
                 } else {
                     selectedFile = path;
+                    history.replaceState("", "", this.href);
                 }
             },
         }));
@@ -48,16 +72,17 @@
 <ul>
     {#each entries as entry}
         <li class="file-list-item" data-type={entry.type}>
-            <!-- svelte-ignore a11y-invalid-attribute -->
-            <a href="#" on:click={entry.onClick}>{entry.name}</a>
+            <a href={entry.href} on:click|preventDefault={entry.onClick}
+                >{entry.name}</a
+            >
         </li>
     {/each}
 </ul>
 
-{#if selectedFile}
+{#if fileName}
     <div>
         <div>
-            You have selected: <code>{selectedFile}</code>
+            You have selected: <code>{fileName}</code>
         </div>
 
         <div>
