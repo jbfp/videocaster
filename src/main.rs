@@ -1,6 +1,9 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
 #[macro_use]
+extern crate futures;
+
+#[macro_use]
 extern crate lazy_static;
 
 #[macro_use]
@@ -36,7 +39,14 @@ async fn main() -> Result<()> {
     pretty_env_logger::try_init()?;
     let rocket = start_rocket();
     let chrome = start_google_chrome();
-    future::join(rocket, chrome).await;
+
+    if cfg!(target_os = "windows") {
+        future::join(rocket, chrome).await;
+    } else {
+        pin_mut!(rocket, chrome);
+        future::select(rocket, chrome).await;
+    };
+
     Ok(())
 }
 
