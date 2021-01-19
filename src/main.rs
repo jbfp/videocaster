@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene, decl_macro)]
+#![feature(proc_macro_hygiene, decl_macro, str_split_once)]
 
 #[macro_use]
 extern crate futures;
