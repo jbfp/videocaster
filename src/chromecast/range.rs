@@ -1,3 +1,4 @@
+// https://docs.rs/crate/actix-files/0.5.0/source/src/range.rs with modifications
 use thiserror::Error;
 
 /// HTTP Range header representation.

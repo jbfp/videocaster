@@ -1,3 +1,4 @@
+// https://docs.rs/crate/actix-files/0.5.0/source/src/named.rs with modifications
 use super::range::HttpRange;
 use rocket::{
     http::{ContentType, Header, RawStr, Status},
