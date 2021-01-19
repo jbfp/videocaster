@@ -22,17 +22,17 @@ struct Item {
 
 #[derive(Serialize)]
 #[serde(rename_all(serialize = "camelCase"))]
-pub(crate) struct FsResult {
+pub(crate) struct Directory {
     items: Vec<Item>,
     real_path: String,
 }
 
 #[get("/fs?<path>")]
-pub(crate) async fn handler(path: Option<String>) -> Result<Json<FsResult>, Debug<Error>> {
-    Ok(Json(run(path.as_deref())?))
+pub(crate) async fn handler(path: Option<String>) -> Result<Json<Directory>, Debug<Error>> {
+    Ok(Json(dir(path.as_deref())?))
 }
 
-fn run(path: Option<&str>) -> Result<FsResult, Error> {
+fn dir(path: Option<&str>) -> Result<Directory, Error> {
     let path = default_path(path);
     let path = dunce::canonicalize(path)?;
 
@@ -53,7 +53,7 @@ fn run(path: Option<&str>) -> Result<FsResult, Error> {
 
     let real_path = path.display().to_string();
 
-    Ok(FsResult { items, real_path })
+    Ok(Directory { items, real_path })
 }
 
 fn default_path(path: Option<&str>) -> PathBuf {
