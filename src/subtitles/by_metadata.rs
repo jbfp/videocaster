@@ -1,8 +1,7 @@
 use super::{Subtitle, DEFAULT_LANG};
 use crate::opensubs;
 use anyhow::Error;
-use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
-use rocket::response::Debug;
+use rocket::{http::uri::Uri, response::Debug};
 use rocket_contrib::json::Json;
 
 #[get("/subtitles/by-metadata?<title>&<season>&<episode>")]
@@ -18,7 +17,7 @@ pub(crate) async fn handler(
 }
 
 fn format_url(title: String, season: Option<usize>, episode: Option<usize>) -> String {
-    let title = utf8_percent_encode(&title, NON_ALPHANUMERIC);
+    let title = Uri::percent_encode(&title);
 
     let mut url = format!(
         "https://rest.opensubtitles.org/search/query-{}/sublanguageid-{}",
