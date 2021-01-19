@@ -48,7 +48,7 @@
         } else if (subtitlesByMetadata.length > 0) {
             selectedSubtitles = subtitlesByMetadata[0];
         } else {
-            selectedSubtitles = undefined;
+            selectedSubtitles = null;
         }
     }
 
