@@ -4,9 +4,7 @@ import resolve from '@rollup/plugin-node-resolve';
 import { terser } from 'rollup-plugin-terser';
 import css from 'rollup-plugin-css-only';
 import autoPreprocess from 'svelte-preprocess';
-import replace from '@rollup/plugin-replace';
 import typescript from '@rollup/plugin-typescript';
-import os from "os";
 
 const production = !process.env.ROLLUP_WATCH;
 
@@ -19,11 +17,6 @@ export default {
         file: 'public/build/index.js'
     },
     plugins: [
-        replace({
-            // \\ on Windows, / on sane systems
-            __sep: os.platform() === "win32" ? '\\\\' : '/',
-        }),
-
         svelte({
             compilerOptions: {
                 // enable run-time checks when not in production

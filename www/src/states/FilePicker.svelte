@@ -2,8 +2,6 @@
     import { onMount, createEventDispatcher } from "svelte";
     import * as server from "../server";
 
-    const separator = "__sep"; // replaced at compile time
-
     let currentDir: string | null = null;
     let selectedFile: string | null = null;
     let entries: {
@@ -26,7 +24,7 @@
             url: `#${name}`,
 
             onClick() {
-                const path = `${currentDir}${separator}${name}`;
+                const path = `${currentDir}/${name}`;
 
                 if (isDir) {
                     currentDir = path;
