@@ -6,8 +6,8 @@
     let selectedFile: string | null = null;
     let entries: {
         name: string;
+        path: string;
         type: "dir" | "file";
-        url: string;
         onClick(): void;
     }[] = [];
 
@@ -18,14 +18,12 @@
     async function loadDir() {
         const dir = await server.loadDirectoryAsync(currentDir);
         currentDir = dir.realPath;
-        entries = dir.items.map(({ isDir, name }) => ({
+        entries = dir.items.map(({ isDir, name, path }) => ({
             name,
+            path,
             type: isDir ? "dir" : "file",
-            url: `#${name}`,
 
             onClick() {
-                const path = `${currentDir}/${name}`;
-
                 if (isDir) {
                     currentDir = path;
                     loadDir();
@@ -48,7 +46,8 @@
 <ul>
     {#each entries as entry}
         <li class="file-list-item" data-type={entry.type}>
-            <a href={entry.url} on:click={entry.onClick}>{entry.name}</a>
+            <!-- svelte-ignore a11y-invalid-attribute -->
+            <a href="#" on:click={entry.onClick}>{entry.name}</a>
         </li>
     {/each}
 </ul>

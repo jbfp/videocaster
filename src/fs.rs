@@ -12,18 +12,12 @@ use std::{
 const VALID_EXTENSIONS: [&str; 3] = [".avi", ".mkv", ".mp4"];
 const PARENT: &str = "..";
 
-lazy_static! {
-    static ref PARENT_ITEM: Item = Item {
-        name: PARENT.to_string(),
-        is_dir: true,
-    };
-}
-
 #[derive(Clone, Serialize)]
 #[serde(rename_all(serialize = "camelCase"))]
 struct Item {
     is_dir: bool,
     name: String,
+    path: PathBuf,
 }
 
 #[derive(Serialize)]
@@ -81,12 +75,11 @@ fn entry_to_item(entry: DirEntry) -> Option<Item> {
             if ignore(&name, file_type.is_file()) {
                 None
             } else {
-                let item = Item {
+                Some(Item {
                     is_dir: file_type.is_dir(),
                     name,
-                };
-
-                Some(item)
+                    path: entry.path(),
+                })
             }
         }
     }
@@ -112,7 +105,11 @@ fn sorting(a: &Item, b: &Item) -> Ordering {
 }
 
 fn get_parent(path: &Path) -> Option<Item> {
-    path.parent().map(|_| PARENT_ITEM.clone())
+    path.parent().map(|path| Item {
+        is_dir: true,
+        name: PARENT.to_string(),
+        path: path.to_path_buf(),
+    })
 }
 
 #[cfg(test)]
@@ -155,60 +152,44 @@ mod tests {
 
     mod sorting {
         use super::{sorting, Item};
-        use std::cmp::Ordering;
+        use std::{cmp::Ordering, path::PathBuf};
+
+        fn create_item(name: &str, is_dir: bool) -> Item {
+            Item {
+                is_dir,
+                name: name.to_string(),
+                path: PathBuf::default(),
+            }
+        }
 
         #[test]
         fn dir_before_file() {
-            let a = Item {
-                name: "a".to_string(),
-                is_dir: true,
-            };
-            let b = Item {
-                name: "a".to_string(),
-                is_dir: false,
-            };
+            let a = create_item("a", true);
+            let b = create_item("a", false);
             let actual = sorting(&a, &b);
             assert_eq!(actual, Ordering::Less);
         }
 
         #[test]
         fn dirs_a_before_b() {
-            let a = Item {
-                name: "a".to_string(),
-                is_dir: true,
-            };
-            let b = Item {
-                name: "b".to_string(),
-                is_dir: true,
-            };
+            let a = create_item("a", true);
+            let b = create_item("b", true);
             let actual = sorting(&a, &b);
             assert_eq!(actual, Ordering::Less);
         }
 
         #[test]
         fn files_a_before_b() {
-            let a = Item {
-                name: "b".to_string(),
-                is_dir: false,
-            };
-            let b = Item {
-                name: "a".to_string(),
-                is_dir: false,
-            };
+            let a = create_item("b", false);
+            let b = create_item("a", false);
             let actual = sorting(&a, &b);
             assert_eq!(actual, Ordering::Greater);
         }
 
         #[test]
         fn a_eq_b() {
-            let a = Item {
-                name: "a".to_string(),
-                is_dir: false,
-            };
-            let b = Item {
-                name: "a".to_string(),
-                is_dir: false,
-            };
+            let a = create_item("a", false);
+            let b = create_item("a", false);
             let actual = sorting(&a, &b);
             assert_eq!(actual, Ordering::Equal);
         }

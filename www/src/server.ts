@@ -5,6 +5,7 @@ export async function getLocalIpAsync(): Promise<string> {
 export interface DirectoryEntry {
     isDir: boolean;
     name: string;
+    path: string;
 }
 
 export interface Directory {
