@@ -64,7 +64,12 @@
                     selectedFile = null;
                     loadDir();
                 } else {
-                    selectedFile = path;
+                    if (selectedFile === path) {
+                        selectedFile = null;
+                    } else {
+                        selectedFile = path;
+                    }
+                    
                     history.replaceState("", "", this.href);
                 }
             },
