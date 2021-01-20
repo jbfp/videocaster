@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount, createEventDispatcher } from "svelte";
+    import type { Directory } from "../server";
     import * as server from "../server";
 
     interface Entry {
@@ -10,11 +11,13 @@
         onClick(): void;
     }
 
+    let loading = false;
     let currentDir: string | null = null;
     let selectedFile: string | null = null;
     let entries: Entry[] = [];
 
     $: fileName = selectedFile?.replace(currentDir, "")?.replace(/^\\/, "");
+    $: nextDisabled = loading || selectedFile === null;
 
     const dispatch = createEventDispatcher();
 
@@ -38,7 +41,15 @@
     });
 
     async function loadDir() {
-        const dir = await server.loadDirectoryAsync(currentDir);
+        let dir: Directory;
+
+        try {
+            loading = true;
+            dir = await server.loadDirectoryAsync(currentDir);
+        } finally {
+            loading = false;
+        }
+
         currentDir = dir.realPath;
         history.replaceState("", "", `#${currentDir}`);
         entries = dir.items.map(({ isDir, name, path }) => ({
@@ -72,24 +83,26 @@
 <ul>
     {#each entries as entry}
         <li class="file-list-item" data-type={entry.type}>
-            <a href={entry.href} on:click|preventDefault={entry.onClick}
-                >{entry.name}</a
+            <a
+                href={loading ? undefined : entry.href}
+                on:click|preventDefault={entry.onClick}
+                disabled={loading}>{entry.name}</a
             >
         </li>
     {/each}
 </ul>
 
-{#if fileName}
-    <div>
-        <div>
-            You have selected: <code>{fileName}</code>
-        </div>
+<div>
+    {#if fileName}
+        You have selected: <code>{fileName}</code>
+    {:else}
+        &nbsp;
+    {/if}
+</div>
 
-        <div>
-            <button on:click={next}>Next</button>
-        </div>
-    </div>
-{/if}
+<div>
+    <button disabled={nextDisabled} on:click={next}>Next</button>
+</div>
 
 <style>
     button {
@@ -106,5 +119,12 @@
 
     .file-list-item[data-type="file"] {
         list-style: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iaXNvLTg4NTktMSI/Pg0KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDE5LjAuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPg0KPHN2ZyB2ZXJzaW9uPSIxLjEiIGlkPSJDYXBhXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgNDc3Ljg2NyA0NzcuODY3IiBzdHlsZT0iZW5hYmxlLWJhY2tncm91bmQ6bmV3IDAgMCA0NzcuODY3IDQ3Ny44Njc7IiB4bWw6c3BhY2U9InByZXNlcnZlIj4NCjxnPg0KCTxnPg0KCQk8cGF0aCBkPSJNNDIxLjY0OSw5MC4zMTdMMzM2LjMxNiw0Ljk4M2MtMS41ODktMS41OTMtMy40ODEtMi44NTItNS41NjQtMy43MDNjLTIuMDU5LTAuODQxLTQuMjYxLTEuMjc2LTYuNDg1LTEuMjhIMTAyLjQNCgkJCUM3NC4xMjMsMCw1MS4yLDIyLjkyMyw1MS4yLDUxLjJ2Mzc1LjQ2N2MwLDI4LjI3NywyMi45MjMsNTEuMiw1MS4yLDUxLjJoMjczLjA2N2MyOC4yNzcsMCw1MS4yLTIyLjkyMyw1MS4yLTUxLjJWMTAyLjQNCgkJCUM0MjYuNjQzLDk3Ljg3LDQyNC44NDEsOTMuNTMxLDQyMS42NDksOTAuMzE3eiBNMzQxLjMzMyw1OC4yNjZsMjcuMDY4LDI3LjA2OGgtMjcuMDY4VjU4LjI2NnogTTM5Mi41MzMsNDI2LjY2Nw0KCQkJYzAsOS40MjYtNy42NDEsMTcuMDY3LTE3LjA2NywxNy4wNjdIMTAyLjRjLTkuNDI2LDAtMTcuMDY3LTcuNjQxLTE3LjA2Ny0xNy4wNjdWNTEuMmMwLTkuNDI2LDcuNjQxLTE3LjA2NywxNy4wNjctMTcuMDY3aDIwNC44DQoJCQlWMTAyLjRjMCw5LjQyNiw3LjY0MSwxNy4wNjcsMTcuMDY3LDE3LjA2N2g2OC4yNjdWNDI2LjY2N3oiLz4NCgk8L2c+DQo8L2c+DQo8Zz4NCjwvZz4NCjxnPg0KPC9nPg0KPGc+DQo8L2c+DQo8Zz4NCjwvZz4NCjxnPg0KPC9nPg0KPGc+DQo8L2c+DQo8Zz4NCjwvZz4NCjxnPg0KPC9nPg0KPGc+DQo8L2c+DQo8Zz4NCjwvZz4NCjxnPg0KPC9nPg0KPGc+DQo8L2c+DQo8Zz4NCjwvZz4NCjxnPg0KPC9nPg0KPGc+DQo8L2c+DQo8L3N2Zz4NCg==);
+    }
+
+    a[disabled="true"] {
+        color: currentColor;
+        cursor: unset;
+        opacity: 0.5;
+        text-decoration: underline;
     }
 </style>
