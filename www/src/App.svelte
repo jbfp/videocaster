@@ -26,6 +26,13 @@
     }
 </script>
 
+<header>
+    <h1>
+        Videocaster
+        <google-cast-launcher />
+    </h1>
+</header>
+
 {#if currentState === "file picker"}
     <FilePicker on:filePicked={catchFilePicked} />
 {:else if currentState === "subtitles picker"}
@@ -36,3 +43,31 @@
 {:else if currentState === "video player"}
     <VideoPlayer {filePath} {subtitlesUrl} on:stop={catchStop} />
 {/if}
+
+<footer>
+    <em>
+        Subtitles provided by <a
+            href="https://www.opensubtitles.org"
+            target="_blank">OpenSubtitles.org</a
+        >
+        | Made by <a href="https://github.com/jbfp/" target="_blank">jbfp</a>
+        |
+        <a href="https://github.com/jbfp/videocaster" target="_blank"
+            >Source Code</a
+        >
+    </em>
+</footer>
+
+<style>
+    google-cast-launcher {
+        display: inline-block;
+        width: 24px;
+        height: 24px;
+    }
+
+    em {
+        color: #666666;
+        display: inline-block;
+        font-size: small;
+    }
+</style>

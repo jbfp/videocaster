@@ -15,7 +15,8 @@
 
     let subtitlesByPath: Subtitle[] = [];
     let subtitlesByMetadata: Subtitle[] = [];
-    let selectedSubtitles: Subtitle | null | undefined;
+    let selectedSubtitles: Subtitle;
+    $: numSubtitles = subtitlesByPath.length + subtitlesByMetadata.length;
     $: nextDisabled = loading || typeof selectedSubtitles === "undefined";
 
     const regex = /(.+)[sS](\d{1,2})[eE](\d{1,2}).*/;
@@ -56,18 +57,22 @@
         } else if (subtitlesByMetadata.length > 0) {
             selectedSubtitles = subtitlesByMetadata[0];
         } else {
-            selectedSubtitles = null;
+            selectedSubtitles = undefined;
         }
     }
 
     function next() {
         dispatch("subtitleUrlSelected", selectedSubtitles?.url);
     }
+
+    function skip() {
+        dispatch("subtitleUrlSelected", null);
+    }
 </script>
 
-<h2>Select Subtitles</h2>
+<h2>Select Subtitles <small>(optional)</small></h2>
 
-<div>
+<div class="flex-horizontal">
     <label for="title">Title:</label>
     <input
         id="title"
@@ -77,55 +82,54 @@
     />
 </div>
 
-<div>
+<div class="flex-horizontal">
     <label for="season">Season:</label>
     <input id="season" type="text" bind:value={season} placeholder="02" />
 </div>
 
-<div>
+<div class="flex-horizontal">
     <label for="episode">Episode:</label>
     <input id="episode" type="text" bind:value={episode} placeholder="03" />
 </div>
 
-<div>
+<div class="flex-horizontal">
     <button disabled={loading} on:click={search}>Search</button>
 
-    {#if subtitlesByPath && subtitlesByMetadata}
-        {subtitlesByPath.length + subtitlesByMetadata.length || "no"} subtitles found
+    {#if loading}
+        <span>Searching...</span>
+    {:else if subtitlesByPath && subtitlesByMetadata}
+        <span>{numSubtitles} subtitles found.</span>
+
+        {#if numSubtitles === 0}
+            <span>Perhaps the title is missing an apostrophe or other special characters.</span>
+        {/if}
     {/if}
 </div>
 
-<div>
-    <select bind:value={selectedSubtitles} disabled={loading}>
-        {#each subtitlesByPath as subtitle}
-            <option value={subtitle}>{subtitle.name} (Best fit)</option>
-        {/each}
+<select bind:value={selectedSubtitles} disabled={loading} size={10000}>
+    {#each subtitlesByPath as subtitle}
+        <option value={subtitle}>{subtitle.name} (Best fit)</option>
+    {/each}
 
-        {#each subtitlesByMetadata as subtitle}
-            <option value={subtitle}>{subtitle.name}</option>
-        {/each}
+    {#each subtitlesByMetadata as subtitle}
+        <option value={subtitle}>{subtitle.name}</option>
+    {/each}
+</select>
 
-        <option value={null}>without subtitles</option>
-    </select>
-</div>
-
-<div>
+<div class="flex-horizontal">
     <button on:click={next} disabled={nextDisabled}>Next</button>
-
-    {#if !nextDisabled}
-        Selected subtitles: <code
-            >{selectedSubtitles?.name || "without subtitles"}</code
-        >
-    {/if}
+    <button on:click={skip}>Skip</button>
 </div>
+
+{#if selectedSubtitles}
+    <div>
+        Selected subtitles: <code>{selectedSubtitles?.name}</code>
+    </div>
+{/if}
 
 <style>
-    div {
-        margin-bottom: 0.5em;
-    }
-
     label {
-        display: inline-block;
+        display: block;
         width: 60px;
     }
 
@@ -134,8 +138,10 @@
     }
 
     select {
-        max-width: 500px;
-        min-width: 300px;
-        width: auto;
+        flex: 1 0;
+    }
+
+    small {
+        color: #666;
     }
 </style>

@@ -1,3 +1,9 @@
+export interface AppResult<T> {
+    success: boolean;
+    obj: T | null;
+    error: string | null;
+}
+
 export async function getLocalIpAsync(): Promise<string> {
     return fetch('/ip').then(res => res.json());
 }
@@ -15,8 +21,8 @@ export interface Directory {
 
 export async function loadDirectoryAsync(
     path?: string
-): Promise<Directory> {
-    const query = path ? `?path=${encodeURIComponent(path)}` : "";
+): Promise<AppResult<Directory>> {
+    const query = path?.length > 0 ? `?path=${encodeURIComponent(path)}` : "";
     const url = `/fs${query}`;
     return fetch(url).then(res => res.json());
 }

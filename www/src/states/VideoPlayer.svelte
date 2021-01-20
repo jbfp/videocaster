@@ -254,35 +254,37 @@
     }
 </script>
 
-<h2>Now Playing <code>{fileName}</code></h2>
+<main>
+    <h2>Now Playing <code>{fileName}</code></h2>
 
-<div class="controls">
-    <PlayButton {playerState} on:playOrPause={playOrPause} />
-    <MuteButton {isMuted} on:muteOrUnmute={muteOrUnmute} />
+    <div class="controls">
+        <PlayButton {playerState} on:playOrPause={playOrPause} />
+        <MuteButton {isMuted} on:muteOrUnmute={muteOrUnmute} />
 
-    <input
-        type="range"
-        min="0"
-        max="1"
-        bind:value={volume}
-        step="0.01"
-        on:change={setVolume}
-    />
-    <div class="center">{volumeStr}</div>
+        <input
+            type="range"
+            min="0"
+            max="1"
+            bind:value={volume}
+            step="0.01"
+            on:change={setVolume}
+        />
+        <div class="center">{volumeStr}</div>
 
-    <button on:click={reload}>Reload</button>
-    <button on:click={stop}> Stop </button>
-</div>
+        <button on:click={reload}>Reload</button>
+        <button on:click={stop}> Stop </button>
+    </div>
 
-<div id="seekbar">
-    <SeekBar
-        {canSeek}
-        {currentTime}
-        {duration}
-        on:seek={seek}
-        on:finishSeek={finishSeek}
-    />
-</div>
+    <div id="seekbar">
+        <SeekBar
+            {canSeek}
+            {currentTime}
+            {duration}
+            on:seek={seek}
+            on:finishSeek={finishSeek}
+        />
+    </div>
+</main>
 
 <style>
     .center {
