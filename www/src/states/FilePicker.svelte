@@ -93,15 +93,11 @@
 </ul>
 
 <div>
-    {#if fileName}
-        You have selected: <code>{fileName}</code>
-    {:else}
-        &nbsp;
-    {/if}
-</div>
-
-<div>
     <button disabled={nextDisabled} on:click={next}>Next</button>
+
+    {#if fileName}
+        Selected video file: <code>{fileName}</code>
+    {/if}
 </div>
 
 <style>
