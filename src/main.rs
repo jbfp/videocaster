@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene, decl_macro, str_split_once)]
+#![feature(decl_macro, proc_macro_hygiene, str_split_once)]
 
 #[macro_use]
 extern crate futures;
@@ -26,7 +26,11 @@ use rocket::{
     Response,
 };
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
-use std::{env::var, io::Cursor, path::PathBuf};
+use std::{
+    env::{temp_dir, var},
+    io::Cursor,
+    path::PathBuf,
+};
 use tokio::process::Command;
 
 lazy_static! {
@@ -79,17 +83,34 @@ async fn start_rocket() {
 }
 
 async fn start_google_chrome() {
-    let port = var("ROCKET_PORT").unwrap_or_else(|_| "8000".into());
-    let url = format!("http://localhost:{}", port);
-    let cmd = if cfg!(target_os = "windows") {
-        Command::new("cmd")
-            .args(&["/C", "start", "chrome", &url])
-            .status()
-    } else {
-        Command::new("google-chrome").arg(&url).status()
+    let run = |cmd: &mut Command| {
+        let app = {
+            let port = var("ROCKET_PORT").unwrap_or_else(|_| "8000".into());
+            format!("--app=http://localhost:{}", port)
+        };
+
+        let window_size = {
+            const WIDTH: usize = 800;
+            const HEIGHT: usize = 1024;
+            format!("--window-size={},{}", WIDTH, HEIGHT)
+        };
+
+        let user_data_dir = {
+            let mut tmp = temp_dir();
+            tmp.push("videocaster");
+            format!("--user-data-dir={}", tmp.display())
+        };
+
+        cmd.args(&[app, window_size, user_data_dir]).status()
     };
 
-    match cmd.await {
+    let fut = if cfg!(target_os = "windows") {
+        run(Command::new("cmd").args(&["/C", "start", "chrome"]))
+    } else {
+        run(&mut Command::new("google-chrome"))
+    };
+
+    match fut.await {
         Ok(exit) => info!("google chrome stopped with code {}", exit),
         Err(err) => error!("failed to open google chrome: {}", err),
     }
