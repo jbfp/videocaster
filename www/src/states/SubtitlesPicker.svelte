@@ -7,6 +7,8 @@
 
     const dispatch = createEventDispatcher();
 
+    let loading = false;
+
     let title: string;
     let season: string | null;
     let episode: string | null;
@@ -14,7 +16,7 @@
     let subtitlesByPath: Subtitle[] = [];
     let subtitlesByMetadata: Subtitle[] = [];
     let selectedSubtitles: Subtitle | null | undefined;
-    $: disabled = typeof selectedSubtitles === "undefined";
+    $: nextDisabled = loading || typeof selectedSubtitles === "undefined";
 
     const regex = /(.+)[sS](\d{1,2})[eE](\d{1,2}).*/;
 
@@ -38,10 +40,16 @@
     });
 
     async function search() {
-        [subtitlesByPath, subtitlesByMetadata] = await Promise.all([
-            server.searchSubsByPath(filePath),
-            server.searchSubsByMetadataAsync(title, season, episode),
-        ]);
+        loading = true;
+
+        try {
+            [subtitlesByPath, subtitlesByMetadata] = await Promise.all([
+                server.searchSubsByPath(filePath),
+                server.searchSubsByMetadataAsync(title, season, episode),
+            ]);
+        } finally {
+            loading = false;
+        }
 
         if (subtitlesByPath.length > 0) {
             selectedSubtitles = subtitlesByPath[0];
@@ -80,7 +88,7 @@
 </div>
 
 <div>
-    <button on:click={search}>Search</button>
+    <button disabled={loading} on:click={search}>Search</button>
 
     {#if subtitlesByPath && subtitlesByMetadata}
         {subtitlesByPath.length + subtitlesByMetadata.length || "no"} subtitles found
@@ -88,7 +96,7 @@
 </div>
 
 <div>
-    <select bind:value={selectedSubtitles}>
+    <select bind:value={selectedSubtitles} disabled={loading}>
         {#each subtitlesByPath as subtitle}
             <option value={subtitle}>{subtitle.name} (Best fit)</option>
         {/each}
@@ -102,9 +110,9 @@
 </div>
 
 <div>
-    <button on:click={next} {disabled}>Next</button>
+    <button on:click={next} disabled={nextDisabled}>Next</button>
 
-    {#if !disabled}
+    {#if !nextDisabled}
         Selected subtitles: <code
             >{selectedSubtitles?.name || "without subtitles"}</code
         >
