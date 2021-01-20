@@ -1,5 +1,6 @@
 // https://docs.rs/crate/actix-files/0.5.0/source/src/range.rs with modifications
 use thiserror::Error;
+use std::num::ParseIntError;
 
 /// HTTP Range header representation.
 #[derive(Debug, Clone, Copy)]
@@ -19,6 +20,9 @@ pub(crate) enum HttpRangeParseError {
     #[error("Range is invalid")]
     InvalidRange,
 
+    #[error("Failed to parse range")]
+    ParsingError(#[from] ParseIntError),
+
     #[error("Start of range is after end of range")]
     StartAfterEnd,
 
@@ -37,7 +41,7 @@ impl HttpRange {
     ///
     /// `header` is HTTP Range header (e.g. `bytes=bytes=0-9`).
     /// `size` is full size of response (file).
-    pub fn parse(header: &str, size: u64) -> Result<Vec<HttpRange>, anyhow::Error> {
+    pub fn parse(header: &str, size: u64) -> Result<Vec<HttpRange>, HttpRangeParseError> {
         use HttpRangeParseError::*;
 
         if header.is_empty() {
@@ -55,7 +59,7 @@ impl HttpRange {
             .split(',')
             .map(|x| x.trim())
             .filter(|x| !x.is_empty())
-            .map(|ra| -> Result<Option<HttpRange>, anyhow::Error> {
+            .map(|ra| {
                 let (start_str, end_str) = ra.split_once('-').ok_or(InvalidRange)?;
                 let start_str = start_str.trim();
                 let end_str = end_str.trim();
@@ -63,7 +67,7 @@ impl HttpRange {
                 if start_str.is_empty() {
                     // If no start is specified, end specifies the
                     // range start relative to the end of the file.
-                    let mut length: i64 = end_str.parse()?;
+                    let mut length = end_str.parse::<i64>()?;
 
                     if length > size_sig {
                         length = size_sig;
@@ -74,7 +78,7 @@ impl HttpRange {
                         length: length as u64,
                     }))
                 } else {
-                    let start: i64 = start_str.parse()?;
+                    let start = start_str.parse::<i64>()?;
 
                     if start < 0 {
                         return Err(StartIsNegative)?;
@@ -108,7 +112,7 @@ impl HttpRange {
                     }))
                 }
             })
-            .collect::<Result<_, anyhow::Error>>()?;
+            .collect::<Result<_, HttpRangeParseError>>()?;
 
         let ranges: Vec<HttpRange> = all_ranges.into_iter().filter_map(|x| x).collect();
 
