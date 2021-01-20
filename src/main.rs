@@ -12,6 +12,7 @@ extern crate log;
 #[macro_use]
 extern crate rocket;
 
+mod app_result;
 mod chromecast;
 mod fs;
 mod ip;

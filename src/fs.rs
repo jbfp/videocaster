@@ -1,13 +1,11 @@
-use crate::HOME;
+use crate::{app_result::AppResult, HOME};
 use anyhow::Error;
-use rocket::response::Debug;
-use rocket_contrib::json::Json;
 use serde::Serialize;
 use std::{
     cmp::Ordering,
-    fs::DirEntry,
     path::{Path, PathBuf},
 };
+use tokio::fs::{self, DirEntry};
 
 const VALID_EXTENSIONS: [&str; 3] = [".avi", ".mkv", ".mp4"];
 const PARENT: &str = "..";
@@ -28,21 +26,34 @@ pub(crate) struct Directory {
 }
 
 #[get("/fs?<path>")]
-pub(crate) async fn handler(path: Option<String>) -> Result<Json<Directory>, Debug<Error>> {
-    Ok(Json(dir(path.as_deref())?))
+pub(crate) async fn handler(path: Option<String>) -> AppResult<Directory> {
+    dir(path.as_deref()).await.into()
 }
 
-fn dir(path: Option<&str>) -> Result<Directory, Error> {
+async fn dir(path: Option<&str>) -> Result<Directory, Error> {
     let path = default_path(path);
+    trace!("path or default: {}", path.display());
     let path = dunce::canonicalize(path)?;
+    let real_path = path.display().to_string();
+    trace!("canonical path: {}", real_path);
+    let mut entries = fs::read_dir(&path).await?;
+    let mut items = Vec::new();
 
-    trace!("canonical path: {:#?}", path);
+    loop {
+        let next = entries.next_entry().await?;
 
-    let mut items = std::fs::read_dir(&path)?
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter_map(entry_to_item)
-        .collect::<Vec<_>>();
+        if let Some(entry) = next {
+            match entry_to_item(&entry).await {
+                Ok(Some(item)) => items.push(item),
+                Ok(None) => trace!("ignored file {}", entry.path().display()),
+                Err(err) => error!("failed to convert entry to item: {}", err),
+            }
+        } else {
+            break;
+        }
+    }
+
+    info!("found {} files in {}", items.len(), real_path);
 
     items.sort_unstable_by(sorting);
 
@@ -51,8 +62,6 @@ fn dir(path: Option<&str>) -> Result<Directory, Error> {
         .into_iter()
         .for_each(|parent| items.insert(0, parent));
 
-    let real_path = path.display().to_string();
-
     Ok(Directory { items, real_path })
 }
 
@@ -60,29 +69,23 @@ fn default_path(path: Option<&str>) -> PathBuf {
     path.map_or_else(|| HOME.clone(), PathBuf::from)
 }
 
-fn entry_to_item(entry: DirEntry) -> Option<Item> {
+async fn entry_to_item(entry: &DirEntry) -> Result<Option<Item>, Error> {
     trace!("entry to item for {:#?}", entry);
 
-    match entry.file_type() {
-        Err(err) => {
-            info!("failed to get file type: {}", err);
-            None
-        }
+    let file_type = entry.file_type().await?;
+    let name = entry.file_name().to_string_lossy().to_string();
 
-        Ok(file_type) => {
-            let name = entry.file_name().to_string_lossy().to_string();
+    let item = if ignore(&name, file_type.is_file()) {
+        None
+    } else {
+        Some(Item {
+            is_dir: file_type.is_dir(),
+            name,
+            path: entry.path(),
+        })
+    };
 
-            if ignore(&name, file_type.is_file()) {
-                None
-            } else {
-                Some(Item {
-                    is_dir: file_type.is_dir(),
-                    name,
-                    path: entry.path(),
-                })
-            }
-        }
-    }
+    Ok(item)
 }
 
 fn ignore(name: &str, is_file: bool) -> bool {
