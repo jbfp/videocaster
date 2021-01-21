@@ -39,10 +39,6 @@ button {
     width: 80px;
 }
 
-main {
-    flex: 1 0;
-}
-
 .fill {
     flex: 1 0;
 }
