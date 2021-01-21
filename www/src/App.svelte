@@ -62,8 +62,8 @@
 </script>
 
 <header>
-    <h1>
-        Videocaster
+    <h1 class="flex-horizontal">
+        <span>Videocaster</span>
         <google-cast-launcher />
     </h1>
 </header>
@@ -102,9 +102,9 @@
 
 <style>
     google-cast-launcher {
-        display: inline-block;
-        width: 24px;
-        height: 24px;
+        position: relative;
+        top: 3px;
+        width: 30px;
     }
 
     em {
