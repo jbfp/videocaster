@@ -53,7 +53,9 @@
             name,
             path,
             type: isDir ? "dir" : "file",
-            href: `#${path}`,
+            href: isDir
+                ? `/${encode(path)}`
+                : `/${encode(directory)}/${encode(name)}`,
 
             onClick() {
                 if (isDir) {
