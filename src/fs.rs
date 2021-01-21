@@ -22,7 +22,7 @@ struct Item {
 #[serde(rename_all(serialize = "camelCase"))]
 pub(crate) struct Directory {
     items: Vec<Item>,
-    real_path: String,
+    path: PathBuf,
 }
 
 #[get("/fs?<path>")]
@@ -34,8 +34,7 @@ async fn dir(path: Option<&str>) -> Result<Directory, Error> {
     let path = default_path(path);
     trace!("path or default: {}", path.display());
     let path = dunce::canonicalize(path)?;
-    let real_path = path.display().to_string();
-    trace!("canonical path: {}", real_path);
+    trace!("canonical path: {}", path.display());
     let mut entries = fs::read_dir(&path).await?;
     let mut items = Vec::new();
 
@@ -53,7 +52,7 @@ async fn dir(path: Option<&str>) -> Result<Directory, Error> {
         }
     }
 
-    info!("found {} files in {}", items.len(), real_path);
+    info!("found {} files in {}", items.len(), path.display());
 
     items.sort_unstable_by(sorting);
 
@@ -62,7 +61,7 @@ async fn dir(path: Option<&str>) -> Result<Directory, Error> {
         .into_iter()
         .for_each(|parent| items.insert(0, parent));
 
-    Ok(Directory { items, real_path })
+    Ok(Directory { items, path })
 }
 
 fn default_path(path: Option<&str>) -> PathBuf {
