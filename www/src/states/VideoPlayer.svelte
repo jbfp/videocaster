@@ -39,14 +39,18 @@
         playerState: null,
         currentTime: null,
         duration: null,
-        canSeek: true,
-        volume: 0.5,
-        isMuted: false,
+        canSeek: null,
+        volume: null,
+        isMuted: null,
     };
 
+    $: {
+        console.log(state);
+    }
+
     let ready = false;
-    let player = new RemotePlayer();
-    let playerController = new RemotePlayerController(player);
+    let player;
+    let playerController;
 
     onMount(async () => {
         //
@@ -56,9 +60,11 @@
 
         context.setOptions({
             receiverApplicationId: DEFAULT_MEDIA_RECEIVER_APP_ID,
-            autoJoinPolicy: AutoJoinPolicy.ORIGIN_SCOPED,
-            resumeSavedSession: true,
+            autoJoinPolicy: AutoJoinPolicy.PAGE_SCOPED,
         });
+
+        player = new RemotePlayer();
+        playerController = new RemotePlayerController(player);
 
         playerController.addEventListener(
             RemotePlayerEventType.PLAYER_STATE_CHANGED,
@@ -252,7 +258,7 @@
     }
 </script>
 
-{#if ready}
+{#if true}
     <VideoPlayerView
         {fileName}
         {...state}

@@ -1,5 +1,6 @@
 import svelte from 'rollup-plugin-svelte';
 import commonjs from '@rollup/plugin-commonjs';
+import copy from 'rollup-plugin-copy'
 import resolve from '@rollup/plugin-node-resolve';
 import { terser } from 'rollup-plugin-terser';
 import css from 'rollup-plugin-css-only';
@@ -9,6 +10,7 @@ import typescript from '@rollup/plugin-typescript';
 import os from "os";
 
 const production = !process.env.ROLLUP_WATCH;
+const buildDir = 'public/build';
 
 export default {
     input: 'src/index.ts',
@@ -16,7 +18,7 @@ export default {
         sourcemap: !production,
         format: 'iife',
         name: 'app',
-        file: 'public/build/index.js'
+        file: `${buildDir}/index.js`
     },
     plugins: [
         replace({
@@ -33,6 +35,12 @@ export default {
         }),
 
         typescript({ sourceMap: !production }),
+
+        copy({
+            targets: [
+                { src: "src/fonts/*", dest: buildDir },
+            ],
+        }),
 
         // we'll extract any component CSS out into
         // a separate file - better for performance

@@ -1,18 +1,23 @@
 <script lang="ts">
     import { createEventDispatcher } from "svelte";
 
-    export let title: string | undefined;
-    export let disabled: boolean;
+    export let title: string | undefined = undefined;
+    export let disabled: boolean | undefined = undefined;
     export let value: number;
     export let min: number;
     export let max: number;
     export let step: number;
-    export let formatter: (x: number) => string | undefined;
+    export let showmin: boolean = false;
+    export let showvalue: boolean = true;
+    export let showmax: boolean = false;
+    export let formatter: (x: number) => string | undefined = undefined;
 
     let temp: number;
     let changing = false;
 
-    $: text = formatter ? formatter(temp) : `${temp}`;
+    $: minText = showmin ? (formatter ? formatter(min) : `${min}`) : "";
+    $: valueText = showvalue ? (formatter ? formatter(temp) : `${temp}`) : "";
+    $: maxText = showmax ? (formatter ? formatter(max) : `${max}`) : "";
 
     $: if (!changing) {
         temp = value;
@@ -30,19 +35,32 @@
     }
 </script>
 
-<div class="flex-horizontal">
-    <input
-        type="range"
-        {title}
-        {min}
-        {max}
-        {step}
-        {disabled}
-        bind:value={temp}
-        on:input={input}
-        on:change={change}
-    />
-    <div>{text}</div>
+<div class="flex flex-horizontal">
+    {#if showmin}
+        <div class="muted">{minText}</div>
+    {/if}
+    <div class="flex fill">
+        <input
+            type="range"
+            {title}
+            {min}
+            {max}
+            {step}
+            {disabled}
+            bind:value={temp}
+            on:input={input}
+            on:change={change}
+        />
+    </div>
+    {#if showvalue}
+        <div>{valueText}</div>
+    {/if}
+    {#if showvalue && showmax}
+        <div class="muted">/</div>
+    {/if}
+    {#if showmax}
+        <div class="muted">{maxText}</div>
+    {/if}
 </div>
 
 <style>

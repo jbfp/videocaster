@@ -65,7 +65,7 @@ async fn start_rocket() {
     ];
 
     let cors = CorsOptions {
-        allowed_origins: AllowedOrigins::some_exact(&["https://www.gstatic.com"]),
+        allowed_origins: AllowedOrigins::some_exact(&["https://www.gstatic.com", &whoami()]),
         allowed_methods: vec![Method::Get].into_iter().map(From::from).collect(),
         allowed_headers: AllowedHeaders::some(&["Accept-Encoding", "Content-Type", "Range"]),
         ..Default::default()
@@ -87,8 +87,8 @@ async fn start_rocket() {
 async fn start_google_chrome() {
     let run = |cmd: &mut Command| {
         let app = {
-            let port = var("ROCKET_PORT").unwrap_or_else(|_| "8000".into());
-            format!("--app=http://localhost:{}", port)
+            let url = whoami();
+            format!("--app={}", url)
         };
 
         let window_size = {
@@ -118,4 +118,9 @@ async fn start_google_chrome() {
         Ok(exit) => info!("google chrome stopped with code {}", exit),
         Err(err) => error!("failed to open google chrome: {}", err),
     }
+}
+
+fn whoami() -> String {
+    let port = var("ROCKET_PORT").unwrap_or_else(|_| "8000".into());
+    format!("http://localhost:{}", port)
 }

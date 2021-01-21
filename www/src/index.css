@@ -1,5 +1,42 @@
+@font-face {
+font-family: 'Material Icons';
+font-style: normal;
+font-weight: 400;
+src: local('Material Icons'),
+     local('MaterialIcons-Regular'),
+     url(MaterialIcons-Regular.woff2) format('woff2'),
+     url(MaterialIcons-Regular.woff) format('woff'),
+     url(MaterialIcons-Regular.ttf) format('truetype');
+}
+
+.material-icons {
+    font-family: 'Material Icons';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;  /* Preferred icon size */
+    display: inline-block;
+    line-height: 1;
+    text-transform: none;
+    letter-spacing: normal;
+    word-wrap: normal;
+    white-space: nowrap;
+    direction: ltr;
+
+    /* Support for all WebKit browsers. */
+    -webkit-font-smoothing: antialiased;
+    /* Support for Safari and Chrome. */
+    text-rendering: optimizeLegibility;
+
+    /* Support for Firefox. */
+    -moz-osx-font-smoothing: grayscale;
+
+    /* Support for IE. */
+    font-feature-settings: 'liga';
+}
+
 html {
     font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    line-height: 1;
 }
 
 body {
@@ -13,11 +50,8 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
     font-weight: inherit;
+    line-height: initial;
     margin: 0;
-}
-
-input[type="range"] {
-    vertical-align: middle;
 }
 
 input[type="text"] {
@@ -39,15 +73,29 @@ button {
     width: 80px;
 }
 
+.muted {
+    color: #929292;
+}
+
+.disabled {
+    color: #666666;
+}
+
 .fill {
     flex: 1 0;
 }
 
+.flex {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+}
+
 .flex-horizontal {
     display: flex;
-    flex-direction: row;
-    gap: 0.5em;
     align-items: center;
+    gap: 0.5em;
+    flex-direction: row;
 }
 
 @media (prefers-color-scheme: dark) {
