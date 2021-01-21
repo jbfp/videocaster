@@ -20,6 +20,9 @@
     let entries: Entry[] = [];
     let selectedFileName: string | null = null;
 
+    let currentDir: string | null = directory;
+    let previousDir: string | null = null;
+
     $: fileName = fileName?.replace(directory, "")?.replace(/^\\/, "");
     $: nextDisabled = loading || selectedFileName === null;
     $: {
@@ -47,15 +50,16 @@
         }
 
         const { path, items } = result.obj;
-        directory = path;
-        history.replaceState("", "", `/${encode(directory)}`);
+        previousDir = currentDir;
+        currentDir = path;
+        history.replaceState("", "", `/${encode(currentDir)}`);
         entries = items.map(({ isDir, name, path }) => ({
             name,
             path,
             type: isDir ? "dir" : "file",
             href: isDir
                 ? `/${encode(path)}`
-                : `/${encode(directory)}/${encode(name)}`,
+                : `/${encode(currentDir)}/${encode(name)}`,
 
             onClick() {
                 if (isDir) {
@@ -67,10 +71,9 @@
         }));
     }
 
-    async function changeDir(nextDir: string | null) {
-        directory = nextDir;
-        history.pushState("", "", `/${encode(directory)}`);
-        await loadDir(directory);
+    function changeDir(nextDir: string | null) {
+        history.pushState("", "", `/${encode(currentDir)}`);
+        loadDir(nextDir);
     }
 
     function selectFile(s: string | null) {
@@ -86,6 +89,7 @@
     }
 
     function next() {
+        directory = currentDir;
         fileName = selectedFileName;
         dispatch("select");
     }
