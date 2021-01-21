@@ -97,7 +97,7 @@
 
 <h2>Select Video File</h2>
 
-<input type="text" value={directory} on:change={change} />
+<input type="text" value={currentDir} on:change={change} />
 
 {#if error}
     <div class="fill">{error}</div>
