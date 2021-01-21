@@ -55,6 +55,7 @@ async fn start_rocket() {
     let routes = routes![
         chromecast::subtitles::handler,
         chromecast::video::handler,
+        fs::fallback,
         fs::handler,
         ip::handler,
         subtitles::by_metadata::handler,
@@ -102,7 +103,9 @@ async fn start_google_chrome() {
             format!("--user-data-dir={}", tmp.display())
         };
 
-        cmd.args(&[app, window_size, user_data_dir]).status()
+        cmd.args(&[app, window_size, user_data_dir]);
+        debug!("chrome: {:#?}", cmd);
+        cmd.status()
     };
 
     let fut = if cfg!(target_os = "windows") {

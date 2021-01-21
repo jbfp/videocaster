@@ -1,5 +1,6 @@
 use crate::{app_result::AppResult, HOME};
 use anyhow::Error;
+use rocket::response::Redirect;
 use serde::Serialize;
 use std::{
     cmp::Ordering,
@@ -25,16 +26,22 @@ pub(crate) struct Directory {
     path: PathBuf,
 }
 
-#[get("/fs?<path>")]
-pub(crate) async fn handler(path: Option<String>) -> AppResult<Directory> {
-    dir(path.as_deref()).await.into()
+#[get("/fs")]
+pub(crate) async fn fallback() -> Redirect {
+    let default_path = HOME.to_string_lossy().to_string();
+    let uri = uri!(handler: default_path);
+    Redirect::permanent(uri)
 }
 
-async fn dir(path: Option<&str>) -> Result<Directory, Error> {
-    let path = default_path(path);
-    trace!("path or default: {}", path.display());
+#[get("/fs?<path>")]
+pub(crate) async fn handler(path: String) -> AppResult<Directory> {
+    dir(&path).await.into()
+}
+
+async fn dir(path: &str) -> Result<Directory, Error> {
+    info!("reading dir: {}", path);
     let path = dunce::canonicalize(path)?;
-    trace!("canonical path: {}", path.display());
+    debug!("canonical path: {}", path.display());
     let mut entries = fs::read_dir(&path).await?;
     let mut items = Vec::new();
 
@@ -62,10 +69,6 @@ async fn dir(path: Option<&str>) -> Result<Directory, Error> {
         .for_each(|parent| items.insert(0, parent));
 
     Ok(Directory { items, path })
-}
-
-fn default_path(path: Option<&str>) -> PathBuf {
-    path.map_or_else(|| HOME.clone(), PathBuf::from)
 }
 
 async fn entry_to_item(entry: &DirEntry) -> Result<Option<Item>, Error> {
@@ -117,24 +120,6 @@ fn get_parent(path: &Path) -> Option<Item> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    mod default_path {
-        use super::default_path;
-        use crate::HOME;
-        use std::path::Path;
-
-        #[test]
-        fn uses_home_if_no_path_provided() {
-            assert_eq!(*HOME, default_path(None));
-        }
-
-        #[test]
-        fn uses_path_provided() {
-            let expected = Path::new("../");
-            let actual = default_path(Some("../"));
-            assert_eq!(expected, actual);
-        }
-    }
 
     mod ignore {
         use super::ignore;

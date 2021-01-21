@@ -12,19 +12,29 @@ pub(crate) struct AppResult<T: Serialize> {
     error: Option<String>,
 }
 
+impl<T: Serialize> AppResult<T> {
+    pub(crate) fn success(t: T) -> Self {
+        Self {
+            success: true,
+            obj: Some(t),
+            error: None
+        }
+    }
+
+    pub(crate) fn error<E: ToString>(e: E) -> Self {
+        Self {
+            success: false,
+            obj: None,
+            error: Some(e.to_string())
+        }
+    }
+}
+
 impl<T: Serialize, E: ToString> From<Result<T, E>> for AppResult<T> {
     fn from(r: Result<T, E>) -> Self {
         match r {
-            Ok(t) => AppResult {
-                success: true,
-                obj: Some(t),
-                error: None,
-            },
-            Err(e) => AppResult {
-                success: false,
-                obj: None,
-                error: Some(e.to_string()),
-            },
+            Ok(t) => Self::success(t),
+            Err(e) => Self::error(e),
         }
     }
 }
