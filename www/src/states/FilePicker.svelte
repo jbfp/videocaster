@@ -1,42 +1,34 @@
 <script lang="ts">
-    import { onMount, createEventDispatcher, onDestroy } from "svelte";
+    import { createEventDispatcher } from "svelte";
     import type { AppResult, Directory } from "../server";
     import * as server from "../server";
+    import { encode } from "../encoding";
+
+    export let directory: string | null = null;
+    export let fileName: string | null = null;
 
     interface Entry {
         name: string;
         path: string;
         type: "dir" | "file";
         href: string;
-        onClick(): Promise<void>;
+        onClick(): void;
     }
 
     let loading = false;
     let error: string | null = null;
-    let previousDir: string | null = null;
-    let currentDir: string | null = null;
-    let selectedFile: string | null;
     let entries: Entry[] = [];
+    let selectedFileName: string | null = null;
 
-    $: fileName = selectedFile?.replace(currentDir, "")?.replace(/^\\/, "");
-    $: nextDisabled = loading || selectedFile === null;
+    $: fileName = fileName?.replace(directory, "")?.replace(/^\\/, "");
+    $: nextDisabled = loading || selectedFileName === null;
+    $: {
+        loadDir(directory);
+    }
 
     const dispatch = createEventDispatcher();
 
-    onMount(async () => {
-        const hash = location.hash.slice(1);
-        const nextDir = hash.length > 0 ? decodeURIComponent(hash) : null;
-        await changeDir(nextDir);
-        window.addEventListener("popstate", onNavigation);
-    });
-
-    onDestroy(() => window.removeEventListener("popstate", onNavigation));
-
-    async function onNavigation(event: PopStateEvent) {
-        await changeDir(event.state);
-    }
-
-    async function loadDir() {
+    async function loadDir(dir: string | null) {
         selectFile(null);
 
         let result: AppResult<Directory>;
@@ -44,7 +36,7 @@
         try {
             loading = true;
             error = null;
-            result = await server.loadDirectoryAsync(currentDir);
+            result = await server.loadDirectoryAsync(dir);
         } finally {
             loading = false;
         }
@@ -54,49 +46,52 @@
             return;
         }
 
-        const dir = result.obj;
-        currentDir = dir.realPath;
-        history.replaceState(currentDir, "", `#${currentDir}`);
-        entries = dir.items.map(({ isDir, name, path }) => ({
+        const { path, items } = result.obj;
+        directory = path;
+        history.replaceState("", "", `/${encode(directory)}`);
+        entries = items.map(({ isDir, name, path }) => ({
             name,
             path,
             type: isDir ? "dir" : "file",
             href: `#${path}`,
 
-            async onClick() {
+            onClick() {
                 if (isDir) {
-                    const nextDir = path;
-                    history.pushState(currentDir, "", `#${nextDir}`);
-                    await changeDir(nextDir);
+                    changeDir(path);
                 } else {
-                    selectFile(path);
+                    selectFile(name);
                 }
             },
         }));
     }
 
     async function changeDir(nextDir: string | null) {
-        previousDir = currentDir;
-        currentDir = nextDir;
-        await loadDir();
+        directory = nextDir;
+        history.pushState("", "", `/${encode(directory)}`);
+        await loadDir(directory);
     }
 
     function selectFile(s: string | null) {
-        if (s === null || selectedFile === s) {
-            selectedFile = null;
+        if (s === null || selectedFileName === s) {
+            selectedFileName = null;
         } else {
-            selectedFile = s;
+            selectedFileName = s;
         }
     }
 
+    function change(e: Event) {
+        changeDir((<HTMLInputElement>e.target).value);
+    }
+
     function next() {
-        dispatch("filePicked", selectedFile);
+        fileName = selectedFileName;
+        dispatch("select");
     }
 </script>
 
 <h2>Select Video File</h2>
 
-<input type="text" bind:value={currentDir} on:change={loadDir} />
+<input type="text" value={directory} on:change={change} />
 
 {#if error}
     <div class="fill">{error}</div>
@@ -105,7 +100,7 @@
         {#each entries as entry}
             <li class="file-list-item" data-type={entry.type}>
                 <a
-                    class={selectedFile === entry.path ? "active" : null}
+                    class={fileName === entry.path ? "active" : null}
                     href={loading ? undefined : entry.href}
                     on:click|preventDefault={entry.onClick}
                     disabled={loading}>{entry.name}</a
@@ -118,8 +113,8 @@
 <div class="flex-horizontal">
     <button disabled={nextDisabled} on:click={next}>Next</button>
 
-    {#if selectedFile}
-        <span>Selected video file: <code>{fileName}</code></span>
+    {#if selectedFileName}
+        <span>Selected video file: <code>{selectedFileName}</code></span>
     {/if}
 </div>
 

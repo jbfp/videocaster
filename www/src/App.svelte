@@ -1,28 +1,63 @@
 <script lang="ts">
+    import { onDestroy, onMount } from "svelte";
+    import { decode, encode } from "./encoding";
+
     import FilePicker from "./states/FilePicker.svelte";
     import SubtitlesPicker from "./states/SubtitlesPicker.svelte";
     import VideoPlayer from "./states/VideoPlayer.svelte";
 
-    let currentState: "file picker" | "subtitles picker" | "video player" =
-        "file picker";
+    let ready = false;
+    let directory: string | undefined;
+    let fileName: string | undefined;
+    let subtitlesUrl: string | undefined;
 
-    let filePath: string;
-    let subtitlesUrl: string | null;
+    $: filePath = `${directory}__sep${fileName}`;
 
-    function catchFilePicked(e: CustomEvent<string>) {
-        filePath = e.detail;
-        currentState = "subtitles picker";
+    $: state =
+        directory === undefined || directory === null
+            ? 0
+            : fileName === undefined || fileName === null
+            ? 0
+            : subtitlesUrl === undefined || subtitlesUrl === null
+            ? 1
+            : 2;
+
+    onMount(() => {
+        parsePath();
+        window.addEventListener("popstate", parsePath);
+        ready = true;
+    });
+
+    onDestroy(() => window.removeEventListener("popstate", parsePath));
+
+    function parsePath() {
+        try {
+            [directory, fileName, subtitlesUrl] = location.pathname
+                .slice(1)
+                .split("/")
+                .map(decode);
+        } catch (e) {
+            console.error(e);
+        }
     }
 
-    function catchSubtitleUrlSelected(e: CustomEvent<string | null>) {
-        subtitlesUrl = e.detail;
-        currentState = "video player";
+    function catchFileNameSelected() {
+        history.pushState("", "", `${location.pathname}/${encode(fileName)}`);
+    }
+
+    function catchSubtitleUrlSelected() {
+        history.pushState(
+            "",
+            "",
+            `${location.pathname}/${encode(subtitlesUrl)}`
+        );
     }
 
     function catchStop() {
-        currentState = "file picker";
-        filePath = undefined;
-        subtitlesUrl = undefined;
+        directory = null;
+        fileName = null;
+        subtitlesUrl = null;
+        history.pushState("", "", "/");
     }
 </script>
 
@@ -33,15 +68,22 @@
     </h1>
 </header>
 
-{#if currentState === "file picker"}
-    <FilePicker on:filePicked={catchFilePicked} />
-{:else if currentState === "subtitles picker"}
-    <SubtitlesPicker
-        {filePath}
-        on:subtitleUrlSelected={catchSubtitleUrlSelected}
-    />
-{:else if currentState === "video player"}
-    <VideoPlayer {filePath} {subtitlesUrl} on:stop={catchStop} />
+{#if ready}
+    {#if state === 0}
+        <FilePicker
+            bind:directory
+            bind:fileName
+            on:select={catchFileNameSelected}
+        />
+    {:else if state === 1}
+        <SubtitlesPicker
+            {filePath}
+            bind:subtitlesUrl
+            on:select={catchSubtitleUrlSelected}
+        />
+    {:else if state === 2}
+        <VideoPlayer {filePath} {subtitlesUrl} on:stop={catchStop} />
+    {/if}
 {/if}
 
 <footer>

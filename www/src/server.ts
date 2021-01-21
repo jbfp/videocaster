@@ -16,7 +16,7 @@ export interface DirectoryEntry {
 
 export interface Directory {
     items: DirectoryEntry[];
-    realPath: string;
+    path: string;
 }
 
 export async function loadDirectoryAsync(

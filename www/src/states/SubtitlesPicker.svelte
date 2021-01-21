@@ -1,27 +1,12 @@
 <script lang="ts">
-    import { onMount, createEventDispatcher } from "svelte";
+    import { createEventDispatcher } from "svelte";
     import type { Subtitle } from "../server";
     import * as server from "../server";
 
     export let filePath: string;
+    export let subtitlesUrl: string | null = null;
 
-    const dispatch = createEventDispatcher();
-
-    let loading = false;
-
-    let title: string;
-    let season: string | null;
-    let episode: string | null;
-
-    let subtitlesByPath: Subtitle[] = [];
-    let subtitlesByMetadata: Subtitle[] = [];
-    let selectedSubtitles: Subtitle;
-    $: numSubtitles = subtitlesByPath.length + subtitlesByMetadata.length;
-    $: nextDisabled = loading || typeof selectedSubtitles === "undefined";
-
-    const regex = /(.+)[sS](\d{1,2})[eE](\d{1,2}).*/;
-
-    onMount(() => {
+    $: {
         const separator = "__sep"; // replaced at compile time
         const split = filePath.split(separator);
         const fileName = split[split.length - 1];
@@ -38,7 +23,23 @@
         }
 
         search();
-    });
+    }
+
+    const dispatch = createEventDispatcher();
+
+    let loading = false;
+
+    let title: string;
+    let season: string | null;
+    let episode: string | null;
+
+    let subtitlesByPath: Subtitle[] = [];
+    let subtitlesByMetadata: Subtitle[] = [];
+    let selectedSubtitles: Subtitle;
+    $: numSubtitles = subtitlesByPath.length + subtitlesByMetadata.length;
+    $: nextDisabled = loading || !selectedSubtitles;
+
+    const regex = /(.+)[sS](\d{1,2})[eE](\d{1,2}).*/;
 
     async function search() {
         loading = true;
@@ -62,11 +63,13 @@
     }
 
     function next() {
-        dispatch("subtitleUrlSelected", selectedSubtitles?.url);
+        subtitlesUrl = selectedSubtitles.url;
+        dispatch("select");
     }
 
     function skip() {
-        dispatch("subtitleUrlSelected", null);
+        subtitlesUrl = "";
+        dispatch("select");
     }
 </script>
 
