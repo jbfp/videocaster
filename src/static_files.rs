@@ -1,49 +1,41 @@
 use packer::Packer;
 use rocket::{
     http::{ContentType, Status},
-    Response,
+    response::{status, Content},
 };
-use std::{io::Cursor, path::PathBuf};
+use status::Custom;
+use std::path::PathBuf;
 
 #[derive(Packer)]
 #[packer(source = "www/public")]
 struct StaticFiles;
 
 #[get("/", rank = 10)]
-pub(crate) fn index() -> Response<'static> {
-    get_file("index.html".into(), Some(ContentType::HTML))
+pub(crate) fn index() -> Content<&'static [u8]> {
+    get_file("index.html".into(), Some(ContentType::HTML)).expect("index.html must exist")
 }
 
 #[get("/<path..>", rank = 10)]
-pub(crate) fn file(path: PathBuf) -> Response<'static> {
+pub(crate) fn file(path: PathBuf) -> Option<Content<&'static [u8]>> {
     get_file(path, None)
 }
 
-fn get_file(path: PathBuf, content_type: Option<ContentType>) -> Response<'static> {
+#[catch(404)]
+pub(crate) fn fallback() -> Custom<Content<&'static [u8]>> {
+    Custom(Status::Ok, index())
+}
+
+fn get_file(path: PathBuf, content_type: Option<ContentType>) -> Option<Content<&'static [u8]>> {
     let full_path = format!("www/public/{}", path.display());
-    let file: Option<&'static [u8]> = StaticFiles::get(&full_path);
 
-    let mut response = Response::build();
+    StaticFiles::get(&full_path).map(|bytes| {
+        let content_type = content_type.unwrap_or_else(|| {
+            path.extension()
+                .map(|ext| ext.to_string_lossy())
+                .and_then(|ext| ContentType::from_extension(&ext))
+                .unwrap_or_default()
+        });
 
-    if let Some(file) = file {
-        response.status(Status::Ok);
-
-        let size = file.len();
-        let cursor = Cursor::new(file);
-        response.sized_body(size, cursor);
-
-        if let Some(content_type) = content_type {
-            response.header(content_type);
-        } else if let Some(ext) = path.extension() {
-            let ext_str = ext.to_string_lossy();
-
-            if let Some(content_type) = ContentType::from_extension(&ext_str) {
-                response.header(content_type);
-            }
-        }
-    } else {
-        response.status(Status::NotFound);
-    }
-
-    response.finalize()
+        Content(content_type, bytes)
+    })
 }

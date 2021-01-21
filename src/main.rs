@@ -72,7 +72,11 @@ async fn start_rocket() {
     .to_cors()
     .expect("CORS options are invalid");
 
-    let fut = rocket::ignite().mount("/", routes).attach(cors).launch();
+    let fut = rocket::ignite()
+        .mount("/", routes)
+        .register(catchers![static_files::fallback])
+        .attach(cors)
+        .launch();
 
     if let Err(err) = fut.await {
         error!("Rocket failed to launch: {}", err);
