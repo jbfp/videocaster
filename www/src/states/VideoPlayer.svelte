@@ -1,9 +1,7 @@
 <script lang="ts">
     import { onMount, createEventDispatcher } from "svelte";
     import * as server from "../server";
-    import MuteButton from "../MuteButton.svelte";
-    import PlayButton from "../PlayButton.svelte";
-    import SeekBar from "../SeekBar.svelte";
+    import VideoPlayerView from "./VideoPlayerView.svelte";
 
     const {
         CastContext,
@@ -36,21 +34,17 @@
     export let subtitlesUrl: string | null;
 
     $: fileName = filePath.split("__sep").pop();
-    $: videoPath = `/video/${encodeURIComponent(filePath)}`;
-    $: subtitlesPath = subtitlesUrl
-        ? `/subtitles/download/${encodeURIComponent(subtitlesUrl)}`
-        : "/subtitles/default";
 
-    let playerState: string | null = null;
-    let currentTime: number | null = null;
-    let duration: number | null = null;
-    let isSeeking = false;
-    let canSeek = true;
-    let volume = 0.5;
-    let isMuted = false;
+    let state = {
+        playerState: null,
+        currentTime: null,
+        duration: null,
+        canSeek: true,
+        volume: 0.5,
+        isMuted: false,
+    };
 
-    $: volumeStr = `${Math.trunc(100 * volume)}%`;
-
+    let ready = false;
     let player = new RemotePlayer();
     let playerController = new RemotePlayerController(player);
 
@@ -58,7 +52,6 @@
         //
         // cast setup
         //
-
         const context = CastContext.getInstance();
 
         context.setOptions({
@@ -69,22 +62,19 @@
 
         playerController.addEventListener(
             RemotePlayerEventType.PLAYER_STATE_CHANGED,
-            (e) => (playerState = e.value)
+            (e) => (state = { ...state, playerState: e.value })
         );
 
         playerController.addEventListener(
             RemotePlayerEventType.CAN_SEEK_CHANGED,
-            (e) => (canSeek = e.value)
+            (e) => (state = { ...state, canSeek: e.value })
         );
 
         playerController.addEventListener(
             RemotePlayerEventType.CURRENT_TIME_CHANGED,
             (e) => {
                 console.debug(`current time changed to ${e.value}`);
-
-                if (!isSeeking) {
-                    currentTime = e.value;
-                }
+                state = { ...state, currentTime: e.value };
             }
         );
 
@@ -92,7 +82,7 @@
             RemotePlayerEventType.DURATION_CHANGED,
             (e) => {
                 console.debug(`duration changed to ${e.value}`);
-                duration = e.value;
+                state = { ...state, duration: e.value };
             }
         );
 
@@ -100,22 +90,21 @@
             RemotePlayerEventType.VOLUME_LEVEL_CHANGED,
             (e) => {
                 console.debug(`volume level changed to ${e.value}`);
-                volume = e.value;
-                isMuted = false;
+                state = { ...state, volume: e.value };
             }
         );
 
         playerController.addEventListener(
             RemotePlayerEventType.IS_MUTED_CHANGED,
-            (e) => (isMuted = e.value)
-        );
-
-        playerController.addEventListener(
-            RemotePlayerEventType.TITLE_CHANGED,
-            (e) => (document.title = `Videocaster - ${e.value}`)
+            (e) => {
+                console.debug("is muted", e.value);
+                state = { ...state, isMuted: e.value };
+            }
         );
 
         await loadMedia();
+
+        ready = true;
     });
 
     async function loadMedia() {
@@ -129,6 +118,7 @@
             try {
                 await context.requestSession();
             } catch (e) {
+                console.warn(e);
                 return;
             }
 
@@ -136,28 +126,13 @@
         }
 
         const localIp = await server.getLocalIpAsync();
+        const base = `${location.protocol}//${localIp}:${location.port}`;
 
-        console.info("local ip", localIp);
-        console.info("playing video", filePath, videoPath);
-        console.info("subtitles path", subtitlesUrl, subtitlesPath);
+        console.info("base path", base);
+        console.info("playing video", filePath);
+        console.info("subtitles path", subtitlesUrl);
 
-        const sub = new Track(1, TrackType.TEXT);
-        sub.trackContentId = `http://${localIp}:8080${subtitlesPath}`;
-        sub.trackContentType = "text/vtt";
-        sub.subtype = TextTrackType.SUBTITLES;
-        sub.name = "English Subtitles";
-        sub.language = "en-US";
-        sub.customData = null;
-
-        const mediaInfo = new MediaInfo(`http://${localIp}:8080${videoPath}`);
-        mediaInfo.contentType = "video/mp4";
-        mediaInfo.metadata = new MovieMediaMetadata();
-        mediaInfo.streamType = StreamType.BUFFERED;
-        mediaInfo.textTrackStyle = new TextTrackStyle();
-        mediaInfo.duration = null;
-        mediaInfo.tracks = [sub];
-
-        const loadRequest = new LoadRequest(mediaInfo);
+        const loadRequest = createLoadRequest(base, filePath, subtitlesUrl);
 
         try {
             await castSession.loadMedia(loadRequest);
@@ -167,38 +142,61 @@
             return;
         }
 
-        if (subtitlesUrl) {
-            let media;
+        // enable subtitles
+        let media;
 
-            try {
-                media = await castSession.getMediaSession();
-                console.debug("retrieved media session");
-            } catch (e) {
-                console.error("failed to load media session", e);
-                return;
-            }
-
-            const tracksInfoRequest = new EditTracksInfoRequest([1]);
-
-            try {
-                await media.editTracksInfo(tracksInfoRequest);
-                console.info("subtitles loaded");
-            } catch (e) {
-                console.warn("failed to set subtitle track", e);
-            }
+        try {
+            media = await castSession.getMediaSession();
+            console.debug("retrieved media session");
+        } catch (e) {
+            console.error("failed to load media session", e);
+            return;
         }
 
-        canSeek = true;
+        const tracksInfoRequest = new EditTracksInfoRequest([1]);
+
+        try {
+            await media.editTracksInfo(tracksInfoRequest);
+            console.info("subtitles loaded");
+        } catch (e) {
+            console.warn("failed to set subtitle track", e);
+        }
+    }
+
+    function createLoadRequest(
+        base: string,
+        filePath: string,
+        subtitlesUrl: string | null
+    ) {
+        const videoPath = `/video/${encodeURIComponent(filePath)}`;
+        const mediaInfo = new MediaInfo(`${base}${videoPath}`);
+        mediaInfo.contentType = "video/mp4";
+        mediaInfo.metadata = new MovieMediaMetadata();
+        mediaInfo.streamType = StreamType.BUFFERED;
+        mediaInfo.textTrackStyle = new TextTrackStyle();
+        mediaInfo.duration = null;
+        mediaInfo.tracks = getTracks(base, subtitlesUrl);
+        return new LoadRequest(mediaInfo);
+    }
+
+    function getTracks(base: string, subtitlesUrl: string | null) {
+        if (subtitlesUrl) {
+            const encoded = encodeURIComponent(subtitlesUrl);
+            const subtitlesPath = `/subtitles/download/${encoded}`;
+            const sub = new Track(1, TrackType.TEXT);
+            sub.trackContentId = `${base}${subtitlesPath}`;
+            sub.trackContentType = "text/vtt";
+            sub.subtype = TextTrackType.SUBTITLES;
+            sub.name = "English Subtitles";
+            sub.language = "en-US";
+            sub.customData = null;
+            return [sub];
+        } else {
+            return [];
+        }
     }
 
     function seek(e: CustomEvent<number>) {
-        isSeeking = true;
-        currentTime = e.detail;
-    }
-
-    function finishSeek(e: CustomEvent<number>) {
-        isSeeking = false;
-
         if (!player.canSeek) {
             console.warn("cannot seek");
             return;
@@ -216,14 +214,14 @@
         }
     }
 
-    function setVolume(e: Event) {
+    function setVolume(e: CustomEvent<number>) {
         if (!player.canControlVolume) {
             console.warn("cannot control volume");
             return false;
         }
 
         const previousVolumeLevel = player.volumeLevel;
-        const newVolumeLevel = volume;
+        const newVolumeLevel = e.detail;
         player.volumeLevel = newVolumeLevel;
 
         try {
@@ -236,11 +234,11 @@
         }
     }
 
-    function muteOrUnmute() {
+    function mute() {
         playerController.muteOrUnmute();
     }
 
-    function playOrPause() {
+    function play() {
         playerController.playOrPause();
     }
 
@@ -254,50 +252,15 @@
     }
 </script>
 
-<main>
-    <h2>Now Playing <code>{fileName}</code></h2>
-
-    <div class="controls">
-        <PlayButton {playerState} on:playOrPause={playOrPause} />
-        <MuteButton {isMuted} on:muteOrUnmute={muteOrUnmute} />
-
-        <input
-            type="range"
-            min="0"
-            max="1"
-            bind:value={volume}
-            step="0.01"
-            on:change={setVolume}
-        />
-        <div class="center">{volumeStr}</div>
-
-        <button on:click={reload}>Reload</button>
-        <button on:click={stop}> Stop </button>
-    </div>
-
-    <div id="seekbar">
-        <SeekBar
-            {canSeek}
-            {currentTime}
-            {duration}
-            on:seek={seek}
-            on:finishSeek={finishSeek}
-        />
-    </div>
-</main>
-
-<style>
-    .center {
-        display: flex;
-        align-items: center;
-    }
-
-    .controls {
-        display: flex;
-        gap: 0.25em;
-    }
-
-    #seekbar {
-        margin-top: 0.5em;
-    }
-</style>
+{#if ready}
+    <VideoPlayerView
+        {fileName}
+        {...state}
+        on:mute={mute}
+        on:play={play}
+        on:reload={reload}
+        on:seek={seek}
+        on:stop={stop}
+        on:setvolume={setVolume}
+    />
+{/if}
