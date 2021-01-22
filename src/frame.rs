@@ -16,13 +16,13 @@ pub(crate) async fn handler(path: String) -> Result<Content<Vec<u8>>, Debug<Erro
 async fn extract_jpeg(path: &str) -> Result<Vec<u8>, Error> {
     debug!("video path: {}", path);
 
-    let mut command = if cfg!(target_os = "windows") {
-        unimplemented!()
+    let ffmpeg = if cfg!(target_os = "windows") {
+        "ffmpeg.exe"
     } else {
-        Command::new("ffmpeg")
+        "ffmpeg"
     };
 
-    let output = command
+    let output = Command::new(ffmpeg)
         .args(&[
             "-ss",          // seek to
             "00:00:30",     // 30 seconds
