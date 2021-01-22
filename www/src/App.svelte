@@ -98,12 +98,6 @@
 </footer>
 
 <style>
-    google-cast-launcher {
-        position: relative;
-        top: 3px;
-        width: 30px;
-    }
-
     em {
         color: #666666;
         display: inline-block;
