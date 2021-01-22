@@ -42,14 +42,19 @@ async fn extract_jpeg(path: &str) -> Result<Vec<u8>, Error> {
         .await?;
 
     if output.status.success() {
-        let stdout = output.stdout;
-        let e = String::from_utf8(stdout).unwrap_err();
-        let bytes = e.as_bytes();
-        let inner = e.utf8_error();
-        let valid = inner.valid_up_to();
-        let (_, rest) = bytes.split_at(valid);
-        Ok(rest.to_vec())
+        if let Err(e) = String::from_utf8(output.stdout) {
+            // skip ffmpeg metadata (content-type, content-length)
+            let bytes = e.as_bytes();
+            let inner = e.utf8_error();
+            let valid = inner.valid_up_to();
+            let (_, rest) = bytes.split_at(valid);
+            Ok(rest.to_vec())
+        } else {
+            // no image data was returned, maybe input is not long enough
+            Ok(vec![])
+        }
     } else {
+        // unknown error occurred
         let stderr = output.stderr;
         let e = String::from_utf8_lossy(&stderr);
         Err(anyhow!(e.to_string()))
