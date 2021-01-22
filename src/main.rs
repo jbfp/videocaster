@@ -28,10 +28,7 @@ use anyhow::Result;
 use futures::future;
 use rocket::http::Method;
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
-use std::{
-    env::{temp_dir, var},
-    path::PathBuf,
-};
+use std::{env::var, path::PathBuf};
 use tokio::process::Command;
 
 lazy_static! {
@@ -93,16 +90,21 @@ async fn start_google_chrome() {
     let run = |cmd: &mut Command| {
         let app = format!("--app={}", whoami());
 
-        let start_maximized = "--start-maximized";
-
         let user_data_dir = {
-            let mut tmp = temp_dir();
-            tmp.push("videocaster");
-            format!("--user-data-dir={}", tmp.display())
+            let mut data_dir = dirs::config_dir().expect("no config dir");
+            data_dir.push("videocaster");
+            format!("--user-data-dir={}", data_dir.display())
         };
 
-        cmd.args(&[&app, start_maximized, &user_data_dir]);
+        cmd.args(&[
+            &app,
+            &user_data_dir,
+            "--start-maximized",
+            "--no-default-browser-check",
+        ]);
+
         debug!("chrome: {:#?}", cmd);
+
         cmd.status()
     };
 
