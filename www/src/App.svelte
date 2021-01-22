@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onDestroy, onMount } from "svelte";
+    import { onMount } from "svelte";
     import { decode, encode } from "./encoding";
 
     import FilePicker from "./states/FilePicker.svelte";
@@ -7,41 +7,38 @@
     import VideoPlayer from "./states/VideoPlayer.svelte";
 
     let ready = false;
-    let directory: string | null = null;
+    let directory: string = "";
     let fileName: string | null = null;
     let subtitlesUrl: string | null = null;
 
     $: filePath = `${directory}__sep${fileName}`;
 
     $: state =
-        directory === null || fileName === null
+        !directory || fileName === null
             ? 0
             : subtitlesUrl === null
             ? 1
             : 2;
 
     onMount(() => {
-        parsePath();
-        window.addEventListener("popstate", parsePath);
+        const args = location.pathname.slice(1).split("/").map(decode);
+        directory = args[0] || "";
+        fileName = args[1] || null;
+        subtitlesUrl = args[2] || null;
         ready = true;
     });
 
-    onDestroy(() => window.removeEventListener("popstate", parsePath));
-
-    function parsePath() {
-        const args = location.pathname.slice(1).split("/").map(decode);
-        directory = args[0] || null;
-        fileName = args[1] || null;
-        subtitlesUrl = args[2] || null;
-    }
-
     function filePickerNext() {
-        history.pushState("", "", `${location.pathname}/${encode(fileName)}`);
+        history.pushState(
+            { directory, fileName },
+            "",
+            `${location.pathname}/${encode(fileName)}`
+        );
     }
 
     function subtitlesPickerNext() {
         history.pushState(
-            "",
+            { directory, fileName, subtitlesUrl },
             "",
             `${location.pathname}/${encode(subtitlesUrl)}`
         );
@@ -50,7 +47,7 @@
     function catchHome() {
         fileName = null;
         subtitlesUrl = null;
-        history.pushState("", "", "/");
+        history.pushState({ directory }, "", "/");
     }
 </script>
 
