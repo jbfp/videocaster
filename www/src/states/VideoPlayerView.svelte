@@ -73,17 +73,21 @@
     <IconButton icon={playIcon} on:click={play} disabled={playBtnDisabled} />
 
     <div class="fill">
-        <Range
-            min={0}
-            value={currentTime}
-            max={duration}
-            step={1}
-            disabled={!canSeek}
-            showvalue={true}
-            showmax={true}
-            formatter={timeFormatter}
-            on:change={seek}
-        />
+        {#if playerState === "BUFFERING"}
+            <progress />
+        {:else}
+            <Range
+                min={0}
+                value={currentTime}
+                max={duration}
+                step={1}
+                disabled={!canSeek}
+                showvalue={true}
+                showmax={true}
+                formatter={timeFormatter}
+                on:change={seek}
+            />
+        {/if}
     </div>
 
     <IconButton icon={muteIcon} on:click={mute} />
@@ -113,6 +117,10 @@
 
     #volume {
         width: 100px;
+    }
+
+    progress {
+        width: 100%;
     }
 
     .separator {
