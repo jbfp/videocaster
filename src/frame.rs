@@ -23,6 +23,9 @@ async fn extract_jpeg(path: &str) -> Result<Vec<u8>, Error> {
     #[cfg(target_os = "windows")]
     ffmpeg.set_extension("exe");
 
+    debug!("ffmpeg path: {}", ffmpeg.display());
+    debug!("video path: {}", path);
+
     let output = Command::new(ffmpeg)
         .args(&[
             "-ss",          // seek to
