@@ -122,13 +122,13 @@
 <div class="flex-horizontal">
     <button on:click={next} disabled={nextDisabled}>Next</button>
     <button on:click={skip}>Skip</button>
-</div>
 
-{#if selectedSubtitles}
-    <div>
-        Selected subtitles: <code>{selectedSubtitles?.name}</code>
-    </div>
-{/if}
+    {#if selectedSubtitles}
+        <span>
+            Selected subtitles: <code>{selectedSubtitles?.name}</code>
+        </span>
+    {/if}
+</div>
 
 <style>
     label {
