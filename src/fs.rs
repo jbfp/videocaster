@@ -8,7 +8,7 @@ use std::{
 };
 use tokio::fs::{self, DirEntry};
 
-const VALID_EXTENSIONS: [&str; 3] = [".avi", ".mkv", ".mp4"];
+const VALID_EXTENSIONS: [&str; 4] = [".avi", ".mkv", ".mp4", ".webm"];
 const PARENT: &str = "..";
 
 #[derive(Clone, Serialize)]
@@ -132,6 +132,7 @@ mod tests {
         #[test_case("video.avi", true => false; "when file does not start with dot and has avi ext")]
         #[test_case("video.mkv", true => false; "when file does not start with dot and has mkv ext")]
         #[test_case("video.mp4", true => false; "when file does not start with dot and has mp4 ext")]
+        #[test_case("video.webm", true => false; "when file does not start with dot and has webm ext")]
         fn works(name: &str, is_file: bool) -> bool {
             ignore(name, is_file)
         }
