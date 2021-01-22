@@ -1,5 +1,5 @@
 [package]
-name = "videostream"
+name = "videocaster"
 version = "0.1.0"
 authors = ["jbfp <jakob@jbfp.dk>"]
 edition = "2018"
