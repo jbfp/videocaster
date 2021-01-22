@@ -57,9 +57,7 @@
     <strong id="file-name">{fileName}</strong>
 </h2>
 
-<div class="fill">
-    <img alt="" src={image} draggable="false" />
-</div>
+<img class="fill" alt="" src={image} draggable="false" />
 
 <div class="flex flex-horizontal">
     <IconButton
@@ -108,10 +106,8 @@
     }
 
     img {
-        height: 100%;
+        margin: 0 -1em;
         object-fit: cover;
-        object-position: center;
-        width: 100%;
     }
 
     #volume {
