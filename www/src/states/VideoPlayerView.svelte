@@ -43,8 +43,8 @@
         dispatch("reload");
     }
 
-    function stop() {
-        dispatch("stop");
+    function home() {
+        dispatch("home");
     }
 
     function seek(e: CustomEvent<number>) {
@@ -63,7 +63,7 @@
     <IconButton
         icon={"exit_to_app"}
         title="Stop video and go to start"
-        on:click={stop}
+        on:click={home}
     />
 
     <IconButton icon={"refresh"} title="Reload video" on:click={reload} />

@@ -2,6 +2,7 @@
     import { createEventDispatcher } from "svelte";
     import type { Subtitle } from "../server";
     import * as server from "../server";
+    import IconButton from "../IconButton.svelte";
 
     export let filePath: string;
     export let subtitlesUrl: string | null = null;
@@ -71,6 +72,10 @@
         subtitlesUrl = "";
         dispatch("next");
     }
+
+    function home() {
+        dispatch("home");
+    }
 </script>
 
 <h2>Select Subtitles <small>(optional)</small></h2>
@@ -104,7 +109,10 @@
         <span>{numSubtitles} subtitles found.</span>
 
         {#if numSubtitles === 0}
-            <span>Perhaps the title is missing an apostrophe or other special characters.</span>
+            <span
+                >Perhaps the title is missing an apostrophe or other special
+                characters.</span
+            >
         {/if}
     {/if}
 </div>
@@ -122,6 +130,7 @@
 <div class="flex-horizontal">
     <button on:click={next} disabled={nextDisabled}>Next</button>
     <button on:click={skip}>Skip</button>
+    <IconButton icon={"exit_to_app"} title="Go to start" on:click={home} />
 
     {#if selectedSubtitles}
         <span>

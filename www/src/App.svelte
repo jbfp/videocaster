@@ -47,7 +47,7 @@
         );
     }
 
-    function catchStop() {
+    function catchHome() {
         fileName = null;
         subtitlesUrl = null;
         history.pushState("", "", "/");
@@ -66,9 +66,10 @@
             {filePath}
             bind:subtitlesUrl
             on:next={subtitlesPickerNext}
+            on:home={catchHome}
         />
     {:else if state === 2}
-        <VideoPlayer {filePath} {subtitlesUrl} on:stop={catchStop} />
+        <VideoPlayer {filePath} {subtitlesUrl} on:home={catchHome} />
     {/if}
 {/if}
 
