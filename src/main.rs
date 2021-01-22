@@ -91,16 +91,9 @@ async fn start_rocket() {
 
 async fn start_google_chrome() {
     let run = |cmd: &mut Command| {
-        let app = {
-            let url = whoami();
-            format!("--app={}", url)
-        };
+        let app = format!("--app={}", whoami());
 
-        let window_size = {
-            const WIDTH: usize = 800;
-            const HEIGHT: usize = 1024;
-            format!("--window-size={},{}", WIDTH, HEIGHT)
-        };
+        let start_maximized = "--start-maximized";
 
         let user_data_dir = {
             let mut tmp = temp_dir();
@@ -108,7 +101,7 @@ async fn start_google_chrome() {
             format!("--user-data-dir={}", tmp.display())
         };
 
-        cmd.args(&[app, window_size, user_data_dir]);
+        cmd.args(&[&app, start_maximized, &user_data_dir]);
         debug!("chrome: {:#?}", cmd);
         cmd.status()
     };
