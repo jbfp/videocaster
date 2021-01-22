@@ -106,8 +106,15 @@
     }
 
     img {
+<<<<<<< HEAD
         margin: 0 -1em;
         object-fit: cover;
+=======
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        width: 100%;
+>>>>>>> 55c54dc (Add extracted video frame to video player)
     }
 
     #volume {
