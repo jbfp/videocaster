@@ -36,6 +36,7 @@
     $: fileName = filePath.split("__sep").pop();
 
     let state = {
+        image: null,
         playerState: null,
         currentTime: null,
         duration: null,
@@ -44,11 +45,6 @@
         isMuted: null,
     };
 
-    $: {
-        console.log(state);
-    }
-
-    let ready = false;
     let player;
     let playerController;
 
@@ -108,10 +104,13 @@
             }
         );
 
-        await loadMedia();
-
-        ready = true;
+        await Promise.allSettled([loadMedia(), loadFrame()]);
     });
+
+    async function loadFrame() {
+        const image = await server.getVideoFrame(filePath);
+        state = { ...state, image };
+    }
 
     async function loadMedia() {
         const context = CastContext.getInstance();
@@ -258,15 +257,13 @@
     }
 </script>
 
-{#if true}
-    <VideoPlayerView
-        {fileName}
-        {...state}
-        on:mute={mute}
-        on:play={play}
-        on:reload={reload}
-        on:seek={seek}
-        on:stop={stop}
-        on:setvolume={setVolume}
-    />
-{/if}
+<VideoPlayerView
+    {fileName}
+    {...state}
+    on:mute={mute}
+    on:play={play}
+    on:reload={reload}
+    on:seek={seek}
+    on:stop={stop}
+    on:setvolume={setVolume}
+/>

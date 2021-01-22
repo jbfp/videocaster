@@ -55,3 +55,16 @@ export async function searchSubsByPath(
 ): Promise<Subtitle[]> {
     return fetch(`/subtitles/by-path?path=${path}`).then(res => res.json());
 }
+
+export async function getVideoFrame(
+    path: string
+): Promise<string> {
+    const res = await fetch(`/frame?path=${path}`);
+    const blob = await res.blob();
+    const reader = new FileReader();
+    const promise = new Promise<string>(resolve =>
+        reader.addEventListener("load", () =>
+            resolve(reader.result as string)));
+    reader.readAsDataURL(blob);
+    return await promise;
+}

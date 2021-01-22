@@ -1,6 +1,9 @@
 #![feature(decl_macro, proc_macro_hygiene, str_split_once)]
 
 #[macro_use]
+extern crate anyhow;
+
+#[macro_use]
 extern crate futures;
 
 #[macro_use]
@@ -14,6 +17,7 @@ extern crate rocket;
 
 mod app_result;
 mod chromecast;
+mod frame;
 mod fs;
 mod ip;
 mod opensubs;
@@ -55,6 +59,7 @@ async fn start_rocket() {
     let routes = routes![
         chromecast::subtitles::handler,
         chromecast::video::handler,
+        frame::handler,
         fs::fallback,
         fs::handler,
         ip::handler,

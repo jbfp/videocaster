@@ -4,6 +4,7 @@
     import Range from "../Range.svelte";
 
     export let fileName: string;
+    export let image: string;
     export let playerState: string;
     export let volume: number;
     export let isMuted: boolean;
@@ -56,7 +57,9 @@
     <strong id="file-name">{fileName}</strong>
 </h2>
 
-<div class="fill" />
+<div class="fill">
+    <img alt="" src={image} draggable="false" />
+</div>
 
 <div class="flex flex-horizontal">
     <IconButton
@@ -102,6 +105,13 @@
 <style>
     #file-name {
         color: -webkit-activelink;
+    }
+
+    img {
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        width: 100%;
     }
 
     #volume {
