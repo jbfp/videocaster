@@ -106,7 +106,7 @@
     }
 
     img {
-        margin: 0 -1em;
+        margin: 1em -1em;
         object-fit: cover;
         height: 0;
     }
