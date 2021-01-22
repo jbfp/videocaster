@@ -176,11 +176,12 @@
         const videoPath = `/video/${encodeURIComponent(filePath)}`;
         const mediaInfo = new MediaInfo(`${base}${videoPath}`);
         mediaInfo.contentType = "video/mp4";
+        mediaInfo.duration = null;
         mediaInfo.metadata = new MovieMediaMetadata();
         mediaInfo.streamType = StreamType.BUFFERED;
-        mediaInfo.textTrackStyle = new TextTrackStyle();
-        mediaInfo.duration = null;
         mediaInfo.tracks = getTracks(base, subtitlesUrl);
+        mediaInfo.textTrackStyle = new TextTrackStyle();
+        mediaInfo.textTrackStyle.backgroundColor = '#000000CC';
         return new LoadRequest(mediaInfo);
     }
 
