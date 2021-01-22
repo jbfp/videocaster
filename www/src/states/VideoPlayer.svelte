@@ -108,8 +108,11 @@
     });
 
     async function loadFrame() {
-        const image = await server.getVideoFrame(filePath);
-        state = { ...state, image };
+        try {
+            state = { ...state, image: await server.getVideoFrame(filePath) };
+        } catch (e) {
+            console.error("error loading preview frame", e);
+        }
     }
 
     async function loadMedia() {
