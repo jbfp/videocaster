@@ -256,7 +256,13 @@
     }
 
     function stop() {
-        playerController.stop();
+        const context = CastContext.getInstance();
+        const castSession = context.getCurrentSession();
+
+        if (castSession) {
+            castSession.endSession(true);
+        }
+
         dispatch("stop");
     }
 </script>
