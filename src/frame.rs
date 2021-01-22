@@ -3,7 +3,6 @@ use rocket::{
     http::ContentType,
     response::{Content, Debug},
 };
-use std::{env::{self, consts}, path::PathBuf};
 use tokio::process::Command;
 
 #[get("/frame?<path>")]
