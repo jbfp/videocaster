@@ -3,7 +3,7 @@ use rocket::{
     http::ContentType,
     response::{Content, Debug},
 };
-use std::env::{self, consts};
+use std::{env::{self, consts}, path::PathBuf};
 use tokio::process::Command;
 
 #[get("/frame?<path>")]
@@ -15,18 +15,15 @@ pub(crate) async fn handler(path: String) -> Result<Content<Vec<u8>>, Debug<Erro
 }
 
 async fn extract_jpeg(path: &str) -> Result<Vec<u8>, Error> {
-    let mut ffmpeg = env::current_dir()?;
-    ffmpeg.push("bin");
-    ffmpeg.push("ffmpeg");
-    ffmpeg.push(consts::OS);
-    ffmpeg.push("ffmpeg");
-    #[cfg(target_os = "windows")]
-    ffmpeg.set_extension("exe");
-
-    debug!("ffmpeg path: {}", ffmpeg.display());
     debug!("video path: {}", path);
 
-    let output = Command::new(ffmpeg)
+    let mut command = if cfg!(target_os = "windows") {
+        unimplemented!()
+    } else {
+        Command::new("ffmpeg")
+    };
+
+    let output = command
         .args(&[
             "-ss",          // seek to
             "00:00:30",     // 30 seconds
