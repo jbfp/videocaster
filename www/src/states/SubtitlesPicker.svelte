@@ -64,12 +64,12 @@
 
     function next() {
         subtitlesUrl = selectedSubtitles.url;
-        dispatch("select");
+        dispatch("next");
     }
 
     function skip() {
         subtitlesUrl = "";
-        dispatch("select");
+        dispatch("next");
     }
 </script>
 

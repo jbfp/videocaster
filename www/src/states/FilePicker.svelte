@@ -19,11 +19,8 @@
     let error: string | null = null;
     let entries: Entry[] = [];
     let selectedFileName: string | null = null;
-
     let currentDir: string | null = directory;
-    let previousDir: string | null = null;
 
-    $: fileName = fileName?.replace(directory, "")?.replace(/^\\/, "");
     $: nextDisabled = loading || selectedFileName === null;
     $: {
         loadDir(directory);
@@ -50,7 +47,6 @@
         }
 
         const { path, items } = result.obj;
-        previousDir = currentDir;
         currentDir = path;
         history.replaceState("", "", `/${encode(currentDir)}`);
         entries = items.map(({ isDir, name, path }) => ({
@@ -91,7 +87,7 @@
     function next() {
         directory = currentDir;
         fileName = selectedFileName;
-        dispatch("select");
+        dispatch("next");
     }
 </script>
 

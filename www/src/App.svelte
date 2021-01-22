@@ -7,18 +7,16 @@
     import VideoPlayer from "./states/VideoPlayer.svelte";
 
     let ready = false;
-    let directory: string | undefined;
-    let fileName: string | undefined;
-    let subtitlesUrl: string | undefined;
+    let directory: string | null = null;
+    let fileName: string | null = null;
+    let subtitlesUrl: string | null = null;
 
     $: filePath = `${directory}__sep${fileName}`;
 
     $: state =
-        directory === undefined || directory === null
+        directory === null || fileName === null
             ? 0
-            : fileName === undefined || fileName === null
-            ? 0
-            : subtitlesUrl === undefined || subtitlesUrl === null
+            : subtitlesUrl === null
             ? 1
             : 2;
 
@@ -31,21 +29,17 @@
     onDestroy(() => window.removeEventListener("popstate", parsePath));
 
     function parsePath() {
-        try {
-            [directory, fileName, subtitlesUrl] = location.pathname
-                .slice(1)
-                .split("/")
-                .map(decode);
-        } catch (e) {
-            console.error(e);
-        }
+        const args = location.pathname.slice(1).split("/").map(decode);
+        directory = args[0] || null;
+        fileName = args[1] || null;
+        subtitlesUrl = args[2] || null;
     }
 
-    function catchFileNameSelected() {
+    function filePickerNext() {
         history.pushState("", "", `${location.pathname}/${encode(fileName)}`);
     }
 
-    function catchSubtitleUrlSelected() {
+    function subtitlesPickerNext() {
         history.pushState(
             "",
             "",
@@ -54,7 +48,6 @@
     }
 
     function catchStop() {
-        directory = null;
         fileName = null;
         subtitlesUrl = null;
         history.pushState("", "", "/");
@@ -67,16 +60,12 @@
 
 {#if ready}
     {#if state === 0}
-        <FilePicker
-            bind:directory
-            bind:fileName
-            on:select={catchFileNameSelected}
-        />
+        <FilePicker bind:directory bind:fileName on:next={filePickerNext} />
     {:else if state === 1}
         <SubtitlesPicker
             {filePath}
             bind:subtitlesUrl
-            on:select={catchSubtitleUrlSelected}
+            on:next={subtitlesPickerNext}
         />
     {:else if state === 2}
         <VideoPlayer {filePath} {subtitlesUrl} on:stop={catchStop} />
