@@ -140,10 +140,6 @@
         width: 250px;
     }
 
-    select {
-        flex: 1 0;
-    }
-
     small {
         color: #666;
     }
