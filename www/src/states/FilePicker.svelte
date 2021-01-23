@@ -170,7 +170,7 @@
 
 {#if error}
     <div class="fill">{error}</div>
-{:else}
+{:else if entries.length > 0}
     <ul class="fill">
         {#each entries as entry}
             <li class="file-list-item" data-type={entry.type}>
@@ -185,6 +185,8 @@
             </li>
         {/each}
     </ul>
+{:else}
+    <em class="muted fill">This folder is empty</em>
 {/if}
 
 <div class="flex-horizontal">
@@ -210,9 +212,13 @@
         list-style: url("data:image/svg+xml,%3Csvg version='1.1' id='Capa_1' xmlns='http://www.w3.org/2000/svg' x='0px' y='0px' viewBox='0 0 477.867 477.867'%3E%3Cpath d='M421.649,90.317L336.316,4.983c-1.589-1.593-3.481-2.852-5.564-3.703c-2.059-0.841-4.261-1.276-6.485-1.28H102.4 C74.123,0,51.2,22.923,51.2,51.2v375.467c0,28.277,22.923,51.2,51.2,51.2h273.067c28.277,0,51.2-22.923,51.2-51.2V102.4 C426.643,97.87,424.841,93.531,421.649,90.317z M341.333,58.266l27.068,27.068h-27.068V58.266z M392.533,426.667 c0,9.426-7.641,17.067-17.067,17.067H102.4c-9.426,0-17.067-7.641-17.067-17.067V51.2c0-9.426,7.641-17.067,17.067-17.067h204.8 V102.4c0,9.426,7.641,17.067,17.067,17.067h68.267V426.667z'/%3E%3C/svg%3E%0A");
     }
 
+    a,
+    em {
+        line-height: 200%;
+    }
+
     a {
         border-bottom: 0 solid currentColor;
-        line-height: 200%;
         padding-bottom: 1px;
         text-decoration: none;
     }
