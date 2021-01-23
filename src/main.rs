@@ -87,39 +87,45 @@ async fn start_rocket() {
 }
 
 async fn start_google_chrome() {
-    let run = |cmd: &mut Command| {
-        let app = format!("--app={}", whoami());
+    #[cfg(target_os = "windows")]
+    fn create_command() -> Command {
+        use std::os::windows::process::CommandExt;
+        const DETACHED_PROCESS: u32 = 0x00000008;
+        let mut command = Command::new("cmd");
+        command.args(&["/C", "start", "chrome"]);
+        command.creation_flags(DETACHED_PROCESS);
+        command
+    }
 
-        let user_data_dir = {
-            if let Some(dirs) = ProjectDirs::from(QUALIFIER, ORGANIZATION, APPLICATION) {
-                let path = dirs.config_dir().display();
-                info!("project config dir: {}", path);
-                format!("--user-data-dir={}", path)
-            } else {
-                warn!("no project dirs found, using chrome's default data dir");
-                "".to_string()
-            }
-        };
+    #[cfg(not(target_os = "windows"))]
+    fn create_command() -> Command {
+        Command::new("google-chrome")
+    }
 
-        cmd.args(&[
-            &app,
-            &user_data_dir,
-            "--start-maximized",
-            "--no-default-browser-check",
-        ]);
+    let mut cmd = create_command();
+    let app = format!("--app={}", whoami());
 
-        debug!("chrome: {:#?}", cmd);
-
-        cmd.status()
+    let user_data_dir = {
+        if let Some(dirs) = ProjectDirs::from(QUALIFIER, ORGANIZATION, APPLICATION) {
+            let path = dirs.config_dir().display();
+            info!("project config dir: {}", path);
+            format!("--user-data-dir={}", path)
+        } else {
+            warn!("no project dirs found, using chrome's default data dir");
+            "".to_string()
+        }
     };
 
-    let fut = if cfg!(target_os = "windows") {
-        run(Command::new("cmd").args(&["/C", "start", "chrome"]))
-    } else {
-        run(&mut Command::new("google-chrome"))
-    };
+    cmd.args(&[
+        &app,
+        &user_data_dir,
+        "--start-maximized",
+        "--no-default-browser-check",
+    ]);
 
-    match fut.await {
+    debug!("chrome: {:#?}", cmd);
+
+    match cmd.status().await {
         Ok(exit) => info!("google chrome stopped with code {}", exit),
         Err(err) => error!("failed to open google chrome: {}", err),
     }
