@@ -106,4 +106,8 @@ button {
     button:disabled {
         color: #666666;
     }
+
+    img {
+        opacity: 0.75;
+    }
 }
