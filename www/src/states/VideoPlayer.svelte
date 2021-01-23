@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount, createEventDispatcher } from "svelte";
+    import { createEventDispatcher, onMount, onDestroy } from "svelte";
     import * as server from "../server";
     import VideoPlayerView from "./VideoPlayerView.svelte";
 
@@ -106,7 +106,11 @@
         );
 
         await Promise.allSettled([loadMedia(), loadFrame()]);
+
+        window.addEventListener("unload", disconnect);
     });
+
+    onDestroy(() => window.removeEventListener("unload", disconnect));
 
     async function loadFrame() {
         try {
@@ -134,7 +138,10 @@
             castSession = context.getCurrentSession();
         }
 
-        state = { ...state, receiver: castSession.getCastDevice().friendlyName ?? "" };
+        state = {
+            ...state,
+            receiver: castSession.getCastDevice().friendlyName ?? "",
+        };
 
         const localIp = await server.getLocalIpAsync();
         const base = `${location.protocol}//${localIp}:${location.port}`;
@@ -258,14 +265,17 @@
         await loadMedia();
     }
 
-    function home() {
+    function disconnect() {
         const context = CastContext.getInstance();
         const castSession = context.getCurrentSession();
 
         if (castSession) {
             castSession.endSession(true);
         }
+    }
 
+    function home() {
+        disconnect();
         dispatch("home");
     }
 </script>
