@@ -69,3 +69,7 @@ export async function getVideoFrame(
     reader.readAsDataURL(blob);
     return await promise;
 }
+
+export async function shutdown(): Promise<void> {
+    await fetch("/shutdown", { method: "POST" });
+}

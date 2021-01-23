@@ -28,7 +28,7 @@ mod subtitles;
 use anyhow::Result;
 use directories_next::ProjectDirs;
 use futures::future;
-use rocket::http::Method;
+use rocket::{http::Method, Shutdown};
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 use std::env::var;
 use tokio::process::Command;
@@ -44,13 +44,24 @@ async fn main() -> Result<()> {
     let chrome = start_google_chrome();
 
     if cfg!(target_os = "windows") {
+        // Chrome on Windows returns immediately after launch. This means we can't rely
+        // on closing Chrome to notify us to stop via futures. To fix this, we register
+        // a handler to signal for shutdown. (If the server is stopped via other means,
+        // Chrome won't be closed automatically.)
         future::join(rocket, chrome).await;
     } else {
+        // Chrome on not-Windows does not return until the last window is closed. If the
+        // server is closed via ctrl+c, we also close Chrome automatically.
         pin_mut!(rocket, chrome);
         future::select(rocket, chrome).await;
     };
 
     Ok(())
+}
+
+#[post("/shutdown")]
+pub(crate) async fn shutdown(shutdown: Shutdown) {
+    shutdown.shutdown()
 }
 
 async fn start_rocket() {
@@ -61,10 +72,11 @@ async fn start_rocket() {
         fs::fallback,
         fs::handler,
         ip::handler,
-        subtitles::by_metadata::handler,
-        subtitles::by_path::handler,
+        shutdown,
         static_files::index,
         static_files::file,
+        subtitles::by_metadata::handler,
+        subtitles::by_path::handler,
     ];
 
     let cors = CorsOptions {
