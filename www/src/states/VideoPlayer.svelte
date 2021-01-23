@@ -36,6 +36,7 @@
     $: fileName = filePath.split("__sep").pop();
 
     let state = {
+        receiver: null,
         image: null,
         playerState: null,
         currentTime: null,
@@ -133,6 +134,8 @@
             castSession = context.getCurrentSession();
         }
 
+        state = { ...state, receiver: castSession.getCastDevice().friendlyName ?? "" };
+
         const localIp = await server.getLocalIpAsync();
         const base = `${location.protocol}//${localIp}:${location.port}`;
 
@@ -184,7 +187,7 @@
         mediaInfo.streamType = StreamType.BUFFERED;
         mediaInfo.tracks = getTracks(base, subtitlesUrl);
         mediaInfo.textTrackStyle = new TextTrackStyle();
-        mediaInfo.textTrackStyle.backgroundColor = '#000000CC';
+        mediaInfo.textTrackStyle.backgroundColor = "#000000CC";
         return new LoadRequest(mediaInfo);
     }
 

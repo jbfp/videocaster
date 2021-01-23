@@ -4,6 +4,7 @@
     import Range from "../Range.svelte";
 
     export let fileName: string;
+    export let receiver: string;
     export let image: string;
     export let playerState: string;
     export let volume: number;
@@ -55,6 +56,10 @@
 <h2>
     <span>Now Playing </span>
     <strong id="file-name">{fileName}</strong>
+
+    {#if receiver}
+        <span>on {receiver}</span>
+    {/if}
 </h2>
 
 <img class="fill" alt="" src={image} draggable="false" />
