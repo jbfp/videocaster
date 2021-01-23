@@ -1,5 +1,6 @@
 use crate::app_result::AppResult;
 use anyhow::Error;
+use directories_next::UserDirs;
 use rocket::response::Redirect;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
@@ -26,8 +27,15 @@ pub(crate) struct Directory {
 
 #[get("/fs")]
 pub(crate) async fn fallback() -> Redirect {
-    let home = dirs::home_dir().unwrap_or_default();
-    let path = home.to_str().unwrap_or_default();
+    let path = if let Some(dirs) = UserDirs::new() {
+        let path = dirs.home_dir().display().to_string();
+        info!("fallback dir: {}", path);
+        path
+    } else {
+        warn!("no user dirs found, default path will be /");
+        "/".to_string()
+    };
+
     Redirect::permanent(uri!(handler: path))
 }
 

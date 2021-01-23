@@ -25,11 +25,16 @@ mod static_files;
 mod subtitles;
 
 use anyhow::Result;
+use directories_next::ProjectDirs;
 use futures::future;
 use rocket::http::Method;
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 use std::env::var;
 use tokio::process::Command;
+
+const QUALIFIER: &str = "dk";
+const ORGANIZATION: &str = "jbfp";
+const APPLICATION: &str = "Videocaster";
 
 #[rocket::main]
 async fn main() -> Result<()> {
@@ -86,9 +91,14 @@ async fn start_google_chrome() {
         let app = format!("--app={}", whoami());
 
         let user_data_dir = {
-            let mut data_dir = dirs::config_dir().expect("no config dir");
-            data_dir.push("videocaster");
-            format!("--user-data-dir={}", data_dir.display())
+            if let Some(dirs) = ProjectDirs::from(QUALIFIER, ORGANIZATION, APPLICATION) {
+                let path = dirs.config_dir().display();
+                info!("project config dir: {}", path);
+                format!("--user-data-dir={}", path)
+            } else {
+                warn!("no project dirs found, using chrome's default data dir");
+                "".to_string()
+            }
         };
 
         cmd.args(&[
