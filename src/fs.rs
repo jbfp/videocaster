@@ -3,10 +3,7 @@ use anyhow::Error;
 use directories_next::UserDirs;
 use rocket::response::Redirect;
 use serde::Serialize;
-use std::{
-    os::windows::prelude::MetadataExt,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 use tokio::fs::{self, DirEntry};
 
 const VALID_EXTENSIONS: [&str; 4] = [".avi", ".mkv", ".mp4", ".webm"];
@@ -79,15 +76,8 @@ async fn entry_to_item(entry: &DirEntry) -> Result<Option<Item>, Error> {
     let file_type = entry.file_type().await?;
     let name = entry.file_name().to_string_lossy().to_string();
 
-    if cfg!(target_os = "windows") {
-        const FILE_ATTRIBUTE_HIDDEN: u32 = 0x2;
-        let metadata = entry.metadata().await?;
-        let attributes = metadata.file_attributes();
-        let hidden = attributes & FILE_ATTRIBUTE_HIDDEN == FILE_ATTRIBUTE_HIDDEN;
-
-        if hidden {
-            return Ok(None);
-        }
+    if is_hidden(entry).await? {
+        return Ok(None);
     }
 
     let item = if ignore(&name, file_type.is_file()) {
@@ -101,6 +91,21 @@ async fn entry_to_item(entry: &DirEntry) -> Result<Option<Item>, Error> {
     };
 
     Ok(item)
+}
+
+#[cfg(target_os = "windows")]
+async fn is_hidden(entry: &DirEntry) -> Result<bool, Error> {
+    use std::os::windows::prelude::MetadataExt;
+    const FILE_ATTRIBUTE_HIDDEN: u32 = 0x2;
+    let metadata = entry.metadata().await?;
+    let attributes = metadata.file_attributes();
+    let hidden = attributes & FILE_ATTRIBUTE_HIDDEN == FILE_ATTRIBUTE_HIDDEN;
+    Ok(hidden)
+}
+
+#[cfg(not(target_os = "windows"))]
+async fn is_hidden(_entry: &DirEntry) -> Result<bool, Error> {
+    Ok(false)
 }
 
 fn ignore(name: &str, is_file: bool) -> bool {
