@@ -22,24 +22,25 @@ async fn extract_jpeg(path: &str) -> Result<Vec<u8>, Error> {
         "ffmpeg"
     };
 
-    let output = Command::new(ffmpeg)
-        .args(&[
-            "-ss",          // seek to
-            "00:00:30",     // 30 seconds
-            "-i",           // set input to
-            &path,          // the path of the video
-            "-vframes",     // take n video frame
-            "1",            // n = 1
-            "-q:v",         // set output quality to
-            "6",            // medium
-            "-nostats",     // hide stats from stdout
-            "-hide_banner", // hide banner from stdout
-            "-f",           // set output format to
-            "mpjpeg",       // jpeg
-            "-",            // pipe to stdout
-        ])
-        .output()
-        .await?;
+    let args = [
+        "-ss",          // seek to
+        "00:00:30",     // 30 seconds
+        "-i",           // set input to
+        &path,          // the path of the video
+        "-vframes",     // take n video frame
+        "1",            // n = 1
+        "-q:v",         // set output quality to
+        "6",            // medium
+        "-nostats",     // hide stats from stdout
+        "-hide_banner", // hide banner from stdout
+        "-f",           // set output format to
+        "mpjpeg",       // jpeg
+        "-",            // pipe to stdout
+    ];
+
+    debug!("ffmpeg args: {:#?}", args);
+
+    let output = Command::new(ffmpeg).args(&args).output().await?;
 
     if output.status.success() {
         if let Err(e) = String::from_utf8(output.stdout) {
@@ -47,10 +48,12 @@ async fn extract_jpeg(path: &str) -> Result<Vec<u8>, Error> {
             let bytes = e.as_bytes();
             let inner = e.utf8_error();
             let valid = inner.valid_up_to();
-            let (_, rest) = bytes.split_at(valid);
+            let (header, rest) = bytes.split_at(valid);
+            let header = String::from_utf8_lossy(header);
+            debug!("skipped output from ffmpeg: \"{}\"", header);
             Ok(rest.to_vec())
         } else {
-            // no image data was returned, maybe input is not long enough
+            debug!("no image data was returned, maybe input is not long enough");
             Ok(vec![])
         }
     } else {
