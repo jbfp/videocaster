@@ -11,7 +11,7 @@ use tokio::fs::{self, DirEntry};
 const VALID_EXTENSIONS: [&str; 4] = [".avi", ".mkv", ".mp4", ".webm"];
 const PARENT: &str = "..";
 
-#[derive(Clone, Serialize)]
+#[derive(Serialize)]
 #[serde(rename_all(serialize = "camelCase"))]
 struct Item {
     is_dir: bool,
@@ -23,6 +23,7 @@ struct Item {
 #[serde(rename_all(serialize = "camelCase"))]
 pub(crate) struct Directory {
     items: Vec<Item>,
+    parent: Option<Item>,
     path: PathBuf,
 }
 
@@ -63,12 +64,13 @@ async fn dir(path: &str) -> Result<Directory, Error> {
 
     items.sort_unstable_by(sorting);
 
-    // insert parent ".." if applicable
-    get_parent(&path)
-        .into_iter()
-        .for_each(|parent| items.insert(0, parent));
+    let parent = get_parent(&path);
 
-    Ok(Directory { items, path })
+    Ok(Directory {
+        items,
+        parent,
+        path,
+    })
 }
 
 async fn entry_to_item(entry: &DirEntry) -> Result<Option<Item>, Error> {
@@ -112,7 +114,12 @@ fn sorting(a: &Item, b: &Item) -> Ordering {
 fn get_parent(path: &Path) -> Option<Item> {
     path.parent().map(|path| Item {
         is_dir: true,
-        name: PARENT.to_string(),
+        name: path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .or_else(|| path.to_str())
+            .unwrap_or(PARENT)
+            .to_string(),
         path: path.to_path_buf(),
     })
 }

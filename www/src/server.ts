@@ -8,14 +8,15 @@ export async function getLocalIpAsync(): Promise<string> {
     return fetch('/ip').then(res => res.json());
 }
 
-export interface DirectoryEntry {
+export interface DirectoryItem {
     isDir: boolean;
     name: string;
     path: string;
 }
 
 export interface Directory {
-    items: DirectoryEntry[];
+    items: DirectoryItem[];
+    parent: DirectoryItem | null;
     path: string;
 }
 
