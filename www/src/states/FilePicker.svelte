@@ -8,6 +8,9 @@
     export let directory: string = "";
     export let fileName: string | null = null;
 
+    // collator for sorting directory items
+    const collator = new Intl.Collator();
+
     interface Entry {
         name: string;
         path: string;
@@ -71,23 +74,8 @@
         }
 
         currentDir = path;
+        entries = items.map(map).sort(compare);
         parent = p;
-        entries = items.map(({ isDir, name, path }) => ({
-            name,
-            path,
-            type: isDir ? "dir" : "file",
-            href: isDir
-                ? `/${encode(path)}`
-                : `${location.pathname}/${encode(name)}`,
-
-            onClick() {
-                if (isDir) {
-                    changeDir(path);
-                } else {
-                    selectFile(name);
-                }
-            },
-        }));
 
         selectFile(null);
 
@@ -99,6 +87,33 @@
         } else {
             console.debug("replacing state", currentDir, encodedCurrentDir);
             history.replaceState(currentDir, "", encodedCurrentDir);
+        }
+
+        function map({ isDir, name, path }: DirectoryItem): Entry {
+            return {
+                name,
+                path,
+                type: isDir ? "dir" : "file",
+                href: isDir
+                    ? `/${encode(path)}`
+                    : `${location.pathname}/${encode(name)}`,
+
+                onClick() {
+                    if (isDir) {
+                        changeDir(path);
+                    } else {
+                        selectFile(name);
+                    }
+                },
+            };
+        }
+
+        function compare(a: Entry, b: Entry) {
+            if (a.type === b.type) {
+                return collator.compare(a.name, b.name);
+            }
+
+            return a.type === "dir" ? -1 : 1;
         }
     }
 

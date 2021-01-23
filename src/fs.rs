@@ -2,16 +2,13 @@ use crate::{app_result::AppResult, HOME};
 use anyhow::Error;
 use rocket::response::Redirect;
 use serde::Serialize;
-use std::{
-    cmp::Ordering,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 use tokio::fs::{self, DirEntry};
 
 const VALID_EXTENSIONS: [&str; 4] = [".avi", ".mkv", ".mp4", ".webm"];
 const PARENT: &str = "..";
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all(serialize = "camelCase"))]
 struct Item {
     is_dir: bool,
@@ -19,7 +16,7 @@ struct Item {
     path: PathBuf,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all(serialize = "camelCase"))]
 pub(crate) struct Directory {
     items: Vec<Item>,
@@ -43,6 +40,8 @@ async fn dir(path: &str) -> Result<Directory, Error> {
     info!("reading dir: {}", path);
     let path = dunce::canonicalize(path)?;
     debug!("canonical path: {}", path.display());
+    let parent = get_parent(&path);
+    debug!("parent: {:#?}", parent);
     let mut entries = fs::read_dir(&path).await?;
     let mut items = Vec::new();
 
@@ -61,10 +60,6 @@ async fn dir(path: &str) -> Result<Directory, Error> {
     }
 
     info!("found {} files in {}", items.len(), path.display());
-
-    items.sort_unstable_by(sorting);
-
-    let parent = get_parent(&path);
 
     Ok(Directory {
         items,
@@ -104,13 +99,6 @@ fn ignore(name: &str, is_file: bool) -> bool {
     is_hidden(name) || (is_file && !has_correct_ext(name))
 }
 
-fn sorting(a: &Item, b: &Item) -> Ordering {
-    // directories first, then files, both sorted by case-insensitive name
-    b.is_dir
-        .cmp(&a.is_dir)
-        .then(a.name.to_lowercase().cmp(&b.name.to_lowercase()))
-}
-
 fn get_parent(path: &Path) -> Option<Item> {
     path.parent().map(|path| Item {
         is_dir: true,
@@ -142,51 +130,6 @@ mod tests {
         #[test_case("video.webm", true => false; "when file does not start with dot and has webm ext")]
         fn works(name: &str, is_file: bool) -> bool {
             ignore(name, is_file)
-        }
-    }
-
-    mod sorting {
-        use super::{sorting, Item};
-        use std::{cmp::Ordering, path::PathBuf};
-
-        fn create_item(name: &str, is_dir: bool) -> Item {
-            Item {
-                is_dir,
-                name: name.to_string(),
-                path: PathBuf::default(),
-            }
-        }
-
-        #[test]
-        fn dir_before_file() {
-            let a = create_item("a", true);
-            let b = create_item("a", false);
-            let actual = sorting(&a, &b);
-            assert_eq!(actual, Ordering::Less);
-        }
-
-        #[test]
-        fn dirs_a_before_b() {
-            let a = create_item("a", true);
-            let b = create_item("b", true);
-            let actual = sorting(&a, &b);
-            assert_eq!(actual, Ordering::Less);
-        }
-
-        #[test]
-        fn files_a_before_b() {
-            let a = create_item("b", false);
-            let b = create_item("a", false);
-            let actual = sorting(&a, &b);
-            assert_eq!(actual, Ordering::Greater);
-        }
-
-        #[test]
-        fn a_eq_b() {
-            let a = create_item("a", false);
-            let b = create_item("a", false);
-            let actual = sorting(&a, &b);
-            assert_eq!(actual, Ordering::Equal);
         }
     }
 }
