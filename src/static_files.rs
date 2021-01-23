@@ -28,6 +28,8 @@ pub(crate) fn fallback() -> Custom<Content<&'static [u8]>> {
 fn get_file(path: PathBuf, content_type: Option<ContentType>) -> Option<Content<&'static [u8]>> {
     let full_path = format!("www/public/{}", path.display());
 
+    debug!("static file path: {}", full_path);
+
     StaticFiles::get(&full_path).map(|bytes| {
         let content_type = content_type.unwrap_or_else(|| {
             path.extension()
