@@ -255,7 +255,7 @@
         await loadMedia();
     }
 
-    function stop() {
+    function home() {
         const context = CastContext.getInstance();
         const castSession = context.getCurrentSession();
 
@@ -263,7 +263,7 @@
             castSession.endSession(true);
         }
 
-        dispatch("stop");
+        dispatch("home");
     }
 </script>
 
@@ -274,6 +274,6 @@
     on:play={play}
     on:reload={reload}
     on:seek={seek}
-    on:stop={stop}
+    on:home={home}
     on:setvolume={setVolume}
 />
