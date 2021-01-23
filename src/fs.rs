@@ -1,4 +1,4 @@
-use crate::{app_result::AppResult, HOME};
+use crate::app_result::AppResult;
 use anyhow::Error;
 use rocket::response::Redirect;
 use serde::Serialize;
@@ -26,9 +26,9 @@ pub(crate) struct Directory {
 
 #[get("/fs")]
 pub(crate) async fn fallback() -> Redirect {
-    let default_path = HOME.to_string_lossy().to_string();
-    let uri = uri!(handler: default_path);
-    Redirect::permanent(uri)
+    let home = dirs::home_dir().unwrap_or_default();
+    let path = home.to_str().unwrap_or_default();
+    Redirect::permanent(uri!(handler: path))
 }
 
 #[get("/fs?<path>")]

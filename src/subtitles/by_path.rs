@@ -1,5 +1,5 @@
 use super::{Subtitle, DEFAULT_LANG};
-use crate::{opensubs, HOME};
+use crate::opensubs;
 use anyhow::Error;
 use rocket::response::Debug;
 use rocket_contrib::json::Json;
@@ -14,22 +14,20 @@ use tokio::{
 
 #[get("/subtitles/by-path?<path>")]
 pub(crate) async fn handler(path: String) -> Result<Json<Vec<Subtitle>>, Debug<Error>> {
-    let path = build_path(&path)?;
+    let path = canonicalize(&path)?;
     info!("loading subtitles for {}", path.display());
     let mut file = open_file(&path).await?;
     let size = file_size(&file).await?;
     let hash = create_hash(&mut file, size).await?;
     let url = format_url(size, &hash);
-    trace!("file size: {}, hash: {}", size, hash);
+    debug!("file size: {}, hash: {}", size, hash);
     let subtitles = opensubs::download_subtitles(&url).await?;
     info!("found {} subtitles", subtitles.len());
     Ok(Json(subtitles))
 }
 
-fn build_path(path: &str) -> Result<PathBuf, Error> {
-    let mut root = HOME.clone();
-    root.push(&path);
-    Ok(root.canonicalize()?)
+fn canonicalize<P: AsRef<Path>>(path: &P) -> Result<PathBuf, Error> {
+    Ok(dunce::canonicalize(path)?)
 }
 
 async fn open_file<P: AsRef<Path>>(path: &P) -> Result<File, Error> {

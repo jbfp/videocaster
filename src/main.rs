@@ -28,13 +28,8 @@ use anyhow::Result;
 use futures::future;
 use rocket::http::Method;
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
-use std::{env::var, path::PathBuf};
+use std::env::var;
 use tokio::process::Command;
-
-lazy_static! {
-    /// The user's $HOME dir
-    pub(crate) static ref HOME: PathBuf = dirs::home_dir().unwrap_or_else(|| "/".into());
-}
 
 #[rocket::main]
 async fn main() -> Result<()> {
