@@ -24,7 +24,7 @@
         const args = location.pathname.slice(1).split("/").map(decode);
         directory = args[0] || "";
         fileName = args[1] || null;
-        subtitlesUrl = args[2] || null;
+        subtitlesUrl = args[2] !== undefined ? args[2] : null;
         ready = true;
     });
 
