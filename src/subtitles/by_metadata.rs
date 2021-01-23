@@ -36,8 +36,8 @@ fn format_url(title: &str, season: Option<&str>, episode: Option<&str>) -> Strin
 }
 
 fn encode(input: &str) -> String {
-    // todo: optimize this somehow
-    let input = input.replace('.', " ").replace('/', " ");
+    const INVALID_CHARS: [char; 2] = ['.', '/'];
+    let input = input.replace(&INVALID_CHARS[..], " ");
     let encoded = percent_encoding::utf8_percent_encode(&input, NON_ALPHANUMERIC);
     encoded.to_string()
 }
