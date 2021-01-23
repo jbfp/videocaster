@@ -1,5 +1,4 @@
 #![feature(decl_macro, proc_macro_hygiene, str_split_once)]
-
 #![cfg_attr(profile = "release", windows_subsystem = "windows")]
 
 #[macro_use]
@@ -91,7 +90,6 @@ async fn start_rocket() {
 async fn start_google_chrome() {
     #[cfg(target_os = "windows")]
     fn create_command() -> Command {
-        use std::os::windows::process::CommandExt;
         const DETACHED_PROCESS: u32 = 0x00000008;
         let mut command = Command::new("cmd");
         command.args(&["/C", "start", "chrome"]);
@@ -104,7 +102,6 @@ async fn start_google_chrome() {
         Command::new("google-chrome")
     }
 
-    let mut cmd = create_command();
     let app = format!("--app={}", whoami());
 
     let user_data_dir = {
@@ -118,16 +115,16 @@ async fn start_google_chrome() {
         }
     };
 
-    cmd.args(&[
+    let args = [
         &app,
         &user_data_dir,
         "--start-maximized",
         "--no-default-browser-check",
-    ]);
+    ];
 
-    debug!("chrome: {:#?}", cmd);
+    debug!("chrome args: {:#?}", args);
 
-    match cmd.status().await {
+    match create_command().args(&args).status().await {
         Ok(exit) => info!("google chrome stopped with code {}", exit),
         Err(err) => error!("failed to open google chrome: {}", err),
     }
