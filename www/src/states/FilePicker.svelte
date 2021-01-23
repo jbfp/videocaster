@@ -1,8 +1,8 @@
 <script lang="ts">
     import { createEventDispatcher, onDestroy, onMount } from "svelte";
-    import type { AppResult, Directory } from "../server";
+    import type { AppResult, Directory, DirectoryItem } from "../server";
     import * as server from "../server";
-    import { decode, encode } from "../encoding";
+    import { encode } from "../encoding";
     import IconButton from "../IconButton.svelte";
 
     export let directory: string = "";
@@ -18,15 +18,23 @@
 
     let loading = false;
     let error: string | null = null;
+    let parent: DirectoryItem | null = null;
     let entries: Entry[] = [];
 
+    let input: string = "";
     let currentDir: string = "";
     let selectedFileName: string | null = null;
 
+    $: upTitle = parent ? `Up to "${parent.name}"` : "Up one level";
+    $: upDisabled = parent === null;
     $: nextDisabled = loading || selectedFileName === null;
 
     $: {
         changeDir(directory);
+    }
+
+    $: {
+        input = currentDir;
     }
 
     onMount(() => window.addEventListener("popstate", onpopstate));
@@ -39,16 +47,12 @@
     const dispatch = createEventDispatcher();
 
     async function changeDir(nextDir: string, pushState: boolean = true) {
-        currentDir = nextDir;
-
-        selectFile(null);
-
         let result: AppResult<Directory>;
 
         try {
             loading = true;
             error = null;
-            result = await server.loadDirectoryAsync(currentDir);
+            result = await server.loadDirectoryAsync(nextDir);
         } finally {
             loading = false;
         }
@@ -58,17 +62,16 @@
             return;
         }
 
-        if (pushState) {
-            history.pushState(currentDir, "", `/${encode(currentDir)}`);
+        const { items, parent: p, path } = result.obj;
+
+        if (currentDir === path) {
+            console.debug("changeDir no-op");
+            input = currentDir;
+            return;
         }
 
-        const { path, items } = result.obj;
-
-        if (currentDir !== path) {
-            currentDir = path;
-            history.replaceState(currentDir, "", `/${encode(currentDir)}`);
-        }
-
+        currentDir = path;
+        parent = p;
         entries = items.map(({ isDir, name, path }) => ({
             name,
             path,
@@ -85,6 +88,18 @@
                 }
             },
         }));
+
+        selectFile(null);
+
+        const encodedCurrentDir = `/${encode(currentDir)}`;
+
+        if (pushState) {
+            console.debug("pushing state", currentDir, encodedCurrentDir);
+            history.pushState(currentDir, "", encodedCurrentDir);
+        } else {
+            console.debug("replacing state", currentDir, encodedCurrentDir);
+            history.replaceState(currentDir, "", encodedCurrentDir);
+        }
     }
 
     function selectFile(s: string) {
@@ -100,17 +115,20 @@
     }
 
     function up() {
-        const split = currentDir.split("__sep");
-        const path = split.slice(0, split.length - 1).join("__sep") + "__sep";
-        changeDir(path);
+        if (upDisabled) {
+            return;
+        }
+
+        changeDir(parent.path);
     }
 
     function home() {
         changeDir("");
     }
 
-    function change(e: Event) {
-        changeDir((<HTMLInputElement>e.target).value);
+    function change() {
+        console.log("change", input);
+        changeDir(input);
     }
 
     function next() {
@@ -125,14 +143,14 @@
 <div class="flex flex-horizontal">
     <IconButton icon="arrow_back" title="Go back" on:click={back} />
     <IconButton icon="arrow_forward" title="Go forward" on:click={forward} />
-    <IconButton icon="arrow_upward" title="Go up" on:click={up} />
-    <IconButton icon="home" title="Go to Home" on:click={home} />
-    <input
-        class="fill"
-        type="text"
-        value={currentDir}
-        on:change={change}
+    <IconButton
+        icon="arrow_upward"
+        title={upTitle}
+        on:click={up}
+        disabled={upDisabled}
     />
+    <IconButton icon="home" title="Go to Home" on:click={home} />
+    <input class="fill" type="text" bind:value={input} on:change={change} />
 </div>
 
 {#if error}
@@ -142,7 +160,9 @@
         {#each entries as entry}
             <li class="file-list-item" data-type={entry.type}>
                 <a
-                    class={selectedFileName === entry.name ? "active" : undefined}
+                    class={selectedFileName === entry.name
+                        ? "active"
+                        : undefined}
                     href={loading ? undefined : entry.href}
                     on:click|preventDefault={entry.onClick}
                     disabled={loading}>{entry.name}</a
