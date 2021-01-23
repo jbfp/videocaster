@@ -17,7 +17,7 @@ impl<T: Serialize> AppResult<T> {
         Self {
             success: true,
             obj: Some(t),
-            error: None
+            error: None,
         }
     }
 
@@ -25,7 +25,7 @@ impl<T: Serialize> AppResult<T> {
         Self {
             success: false,
             obj: None,
-            error: Some(e.to_string())
+            error: Some(e.to_string()),
         }
     }
 }
