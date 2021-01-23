@@ -56,17 +56,11 @@ async fn dir(path: &str) -> Result<Directory, Error> {
     let mut entries = fs::read_dir(&path).await?;
     let mut items = Vec::new();
 
-    loop {
-        let next = entries.next_entry().await?;
-
-        if let Some(entry) = next {
-            match entry_to_item(&entry).await {
-                Ok(Some(item)) => items.push(item),
-                Ok(None) => trace!("ignored file {}", entry.path().display()),
-                Err(err) => error!("failed to convert entry to item: {}", err),
-            }
-        } else {
-            break;
+    while let Some(entry) = entries.next_entry().await? {
+        match entry_to_item(&entry).await {
+            Ok(Some(item)) => items.push(item),
+            Ok(None) => trace!("ignored file {}", entry.path().display()),
+            Err(err) => error!("failed to convert entry to item: {}", err),
         }
     }
 
