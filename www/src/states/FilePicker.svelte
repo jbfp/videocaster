@@ -22,7 +22,7 @@
     let loading = false;
     let error: string | null = null;
     let parent: DirectoryItem | null = null;
-    let entries: Entry[] = [];
+    let entries: Entry[] | null = null;
 
     let input: string = "";
     let currentDir: string = "";
@@ -170,6 +170,8 @@
 
 {#if error}
     <div class="fill">{error}</div>
+{:else if entries === null}
+    <em class="muted fill">Loading...</em>
 {:else if entries.length > 0}
     <ul class="fill">
         {#each entries as entry}
