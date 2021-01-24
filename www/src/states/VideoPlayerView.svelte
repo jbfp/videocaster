@@ -40,10 +40,6 @@
         dispatch("setvolume", e.detail);
     }
 
-    function reload() {
-        dispatch("reload");
-    }
-
     function home() {
         dispatch("home");
     }
@@ -71,7 +67,7 @@
         on:click={home}
     />
 
-    <IconButton icon={"refresh"} title="Reload video" on:click={reload} />
+    <google-cast-launcher />
 
     <div class="separator disabled" />
 
@@ -110,6 +106,10 @@
 </div>
 
 <style>
+    google-cast-launcher {
+        width: 24px;
+    }
+
     #file-name {
         color: -webkit-activelink;
     }
