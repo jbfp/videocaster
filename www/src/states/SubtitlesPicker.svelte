@@ -130,7 +130,7 @@
 <div class="flex-horizontal">
     <button on:click={next} disabled={nextDisabled}>Next</button>
     <button on:click={skip}>Skip</button>
-    <IconButton icon={"exit_to_app"} title="Go to start" on:click={home} />
+    <IconButton icon={"home"} title="Go to start" on:click={home} />
 
     {#if selectedSubtitles}
         <span>

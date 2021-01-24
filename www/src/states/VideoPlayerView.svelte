@@ -62,7 +62,7 @@
 
 <div class="flex flex-horizontal">
     <IconButton
-        icon={"exit_to_app"}
+        icon={"home"}
         title="Stop video and go to start"
         on:click={home}
     />
