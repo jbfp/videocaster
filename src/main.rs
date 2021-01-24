@@ -130,7 +130,6 @@ async fn start_google_chrome() {
     let args = [
         &app,
         &user_data_dir,
-        "--start-maximized",
         "--no-default-browser-check",
     ];
 
