@@ -1,23 +1,29 @@
 <script lang="ts">
+    /// <reference types="chromecast-caf-sender" />
     import { createEventDispatcher } from "svelte";
     import IconButton from "../IconButton.svelte";
     import Range from "../Range.svelte";
 
-    export let fileName: string;
-    export let receiver: string;
-    export let image: string;
-    export let playerState: string;
-    export let volume: number;
-    export let isMuted: boolean;
+    const { PlayerState } = chrome.cast.media;
+
+    export let canChangeVolume: boolean;
+    export let canPause: boolean;
     export let canSeek: boolean;
     export let currentTime: number;
     export let duration: number;
-
-    $: playIcon = playerState === "PLAYING" ? "pause" : "play_arrow";
-    $: muteIcon = isMuted ? "volume_off" : "volume_up";
-
-    $: playBtnDisabled =
-        !playerState || playerState === "IDLE" || playerState === "BUFFERING";
+    export let fileName: string;
+    export let image: string;
+    export let isMuted: boolean;
+    export let playerState: string;
+    export let receiver: string;
+    export let volume: number;
+    export let volumeStepInterval: number;
+    export let mute: () => void;
+    export let pause: () => void;
+    export let play: () => void;
+    export let seek: (currentTime: number) => void;
+    export let setVolume: (level: number) => void;
+    export let unmute: () => void;
 
     const timeFormatter = (x: number) => {
         const h = 60 * 60;
@@ -28,30 +34,22 @@
 
     const dispatch = createEventDispatcher();
 
-    function play() {
-        dispatch("play");
+    function onseek(e: CustomEvent<number>) {
+        seek?.(e.detail);
     }
 
-    function mute() {
-        dispatch("mute");
-    }
-
-    function setVolume(e: CustomEvent<number>) {
-        dispatch("setvolume", e.detail);
+    function onsetvolume(e: CustomEvent<number>) {
+        setVolume?.(e.detail);
     }
 
     function home() {
         dispatch("home");
     }
-
-    function seek(e: CustomEvent<number>) {
-        dispatch("seek", e.detail);
-    }
 </script>
 
 <h2>
     <span>Now Playing </span>
-    <strong id="file-name">{fileName}</strong>
+    <strong class="file-name">{fileName}</strong>
 
     {#if receiver}
         <span>on {receiver}</span>
@@ -71,10 +69,16 @@
 
     <div class="separator disabled" />
 
-    <IconButton icon={playIcon} on:click={play} disabled={playBtnDisabled} />
+    {#if playerState === PlayerState.PLAYING}
+        <IconButton icon="pause" on:click={pause} disabled={!canPause} />
+    {:else if playerState === PlayerState.PAUSED}
+        <IconButton icon="play_arrow" on:click={play} />
+    {:else}
+        <IconButton icon="play_arrow" disabled />
+    {/if}
 
     <div class="fill">
-        {#if playerState === "BUFFERING"}
+        {#if playerState === PlayerState.BUFFERING}
             <progress />
         {:else}
             <Range
@@ -86,21 +90,34 @@
                 showvalue={true}
                 showmax={true}
                 formatter={timeFormatter}
-                on:change={seek}
+                on:change={onseek}
             />
         {/if}
     </div>
 
-    <IconButton icon={muteIcon} on:click={mute} />
+    {#if isMuted}
+        <IconButton
+            icon="volume_off"
+            on:click={unmute}
+            disabled={!canChangeVolume}
+        />
+    {:else}
+        <IconButton
+            icon="volume_up"
+            on:click={mute}
+            disabled={!canChangeVolume}
+        />
+    {/if}
 
-    <div id="volume">
+    <div class="volume">
         <Range
             min={0}
             value={volume}
             max={1}
-            step={0.01}
+            step={volumeStepInterval}
+            disabled={!canChangeVolume}
             showvalue={false}
-            on:change={setVolume}
+            on:change={onsetvolume}
         />
     </div>
 </div>
@@ -110,7 +127,7 @@
         width: 24px;
     }
 
-    #file-name {
+    .file-name {
         color: -webkit-activelink;
     }
 
@@ -120,7 +137,7 @@
         height: 0;
     }
 
-    #volume {
+    .volume {
         width: 100px;
     }
 

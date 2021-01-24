@@ -1,204 +1,248 @@
 <script lang="ts">
     /// <reference types="chromecast-caf-sender" />
-    import { createEventDispatcher, onMount, onDestroy } from "svelte";
+    import { createEventDispatcher, onMount, onDestroy, tick } from "svelte";
     import * as server from "../server";
     import VideoPlayerView from "./VideoPlayerView.svelte";
 
-    const {
-        CastContext,
-        LoggerLevel,
-        RemotePlayer,
-        RemotePlayerController,
-        RemotePlayerEventType,
-    } = cast.framework;
-
-    const { AutoJoinPolicy } = chrome.cast;
+    const { CastContext, CastContextEventType, SessionState } = cast.framework;
 
     const {
-        EditTracksInfoRequest,
         LoadRequest,
+        MediaCommand,
         MediaInfo,
         MovieMediaMetadata,
+        PauseRequest,
+        PlayRequest,
+        SeekRequest,
         StreamType,
         TextTrackStyle,
         TextTrackType,
         Track,
         TrackType,
-        DEFAULT_MEDIA_RECEIVER_APP_ID,
     } = chrome.cast.media;
 
     const dispatch = createEventDispatcher();
 
     export let filePath: string;
-    export let subtitlesUrl: string | null;
+    export let subtitlesUrl: string;
 
     $: fileName = filePath.split("__sep").pop();
 
-    let state = {
-        receiver: null,
-        image: null,
-        playerState: null,
+    const castContext = CastContext.getInstance();
+
+    const defaultState = {
+        canPause: null,
+        canSeek: null,
+        canChangeVolume: null,
         currentTime: null,
         duration: null,
-        canSeek: null,
-        volume: null,
         isMuted: null,
+        mute: null,
+        pause: null,
+        play: null,
+        receiver: null,
+        playerState: null,
+        seek: null,
+        setVolume: null,
+        volume: null,
+        volumeStepInterval: null,
+        unmute: null,
     };
 
-    let player;
-    let playerController;
+    let state = { ...defaultState };
+    let image: string;
+    let currentTimeIntervalId: number | null = null;
 
     onMount(async () => {
-        //
-        // cast setup
-        //
-        cast.framework.setLoggerLevel(LoggerLevel.DEBUG);
+        loadFrame();
 
-        const context = CastContext.getInstance();
-
-        context.setOptions({
-            receiverApplicationId: DEFAULT_MEDIA_RECEIVER_APP_ID,
-            autoJoinPolicy: AutoJoinPolicy.PAGE_SCOPED,
-        });
-
-        player = new RemotePlayer();
-        playerController = new RemotePlayerController(player);
-
-        playerController.addEventListener(
-            RemotePlayerEventType.PLAYER_STATE_CHANGED,
-            (e) => (state = { ...state, playerState: e.value })
-        );
-
-        playerController.addEventListener(
-            RemotePlayerEventType.CAN_SEEK_CHANGED,
-            (e) => (state = { ...state, canSeek: e.value })
-        );
-
-        playerController.addEventListener(
-            RemotePlayerEventType.CURRENT_TIME_CHANGED,
-            (e) => {
-                console.debug(`current time changed to ${e.value}`);
-                state = { ...state, currentTime: e.value };
-            }
-        );
-
-        playerController.addEventListener(
-            RemotePlayerEventType.DURATION_CHANGED,
-            (e) => {
-                console.debug(`duration changed to ${e.value}`);
-                state = { ...state, duration: e.value };
-            }
-        );
-
-        playerController.addEventListener(
-            RemotePlayerEventType.VOLUME_LEVEL_CHANGED,
-            (e) => {
-                console.debug(`volume level changed to ${e.value}`);
-                state = { ...state, volume: e.value };
-            }
-        );
-
-        playerController.addEventListener(
-            RemotePlayerEventType.IS_MUTED_CHANGED,
-            (e) => {
-                console.debug("is muted", e.value);
-                state = { ...state, isMuted: e.value };
-            }
-        );
-
-        await Promise.allSettled([loadMedia(), loadFrame()]);
-
-        window.addEventListener("unload", disconnect);
-    });
-
-    onDestroy(() => window.removeEventListener("unload", disconnect));
-
-    async function loadFrame() {
-        try {
-            state = { ...state, image: await server.getVideoFrame(filePath) };
-        } catch (e) {
-            console.error("error loading preview frame", e);
+        if (!window["__isGCastApiAvailable"]) {
+            console.error("chromecast not available");
+            return;
         }
-    }
 
-    async function loadMedia() {
-        const context = CastContext.getInstance();
+        window.addEventListener("beforeunload", onbeforeunload);
 
-        let castSession = context.getCurrentSession();
+        castContext.addEventListener(
+            CastContextEventType.SESSION_STATE_CHANGED,
+            onSessionStateChanged
+        );
+
+        let castSession = castContext.getCurrentSession();
 
         if (!castSession) {
             console.info("getting cast session...");
 
             try {
-                await context.requestSession();
+                await castContext.requestSession();
             } catch (e) {
                 console.warn(e);
-                return;
             }
 
-            castSession = context.getCurrentSession();
+            castSession = castContext.getCurrentSession();
         }
+
+        loadMedia(castSession);
+    });
+
+    onDestroy(() => {
+        window.clearInterval(currentTimeIntervalId);
+
+        window.removeEventListener("beforeunload", onbeforeunload);
+
+        castContext.removeEventListener(
+            CastContextEventType.SESSION_STATE_CHANGED,
+            onSessionStateChanged
+        );
+    });
+
+    function onbeforeunload() {
+        disconnect();
+    }
+
+    async function loadFrame() {
+        try {
+            image = await server.getVideoFrame(filePath);
+        } catch (e) {
+            console.error("error loading preview frame", e);
+        }
+    }
+
+    async function onSessionStateChanged(
+        e: cast.framework.SessionStateEventData
+    ) {
+        console.debug("SESSION_STATE_CHANGED", e);
+
+        if (e.sessionState === SessionState.SESSION_STARTED) {
+            await loadMedia(e.session);
+        } else {
+            window.clearInterval(currentTimeIntervalId);
+            currentTimeIntervalId = null;
+            await tick();
+            state = { ...defaultState };
+        }
+    }
+
+    function sessionUpdateListener() {
+        const session: chrome.cast.Session = this;
+        const receiver = session.receiver;
+        const volume = receiver.volume;
+        // @ts-ignore
+        const fixed = chrome.cast.VolumeControlType.FIXED;
+        // @ts-ignore
+        const canChangeVolume = volume.controlType !== fixed;
+        // @ts-ignore
+        const volumeStepInterval = Math.round(volume.stepInterval * 100) / 100;
 
         state = {
             ...state,
-            receiver: castSession.getCastDevice().friendlyName ?? "",
+            canChangeVolume,
+            isMuted: volume.muted,
+            receiver: receiver.friendlyName,
+            volume: volume.level,
+            volumeStepInterval,
+
+            mute: function () {
+                session.setReceiverMuted(
+                    true,
+                    () => console.debug("muted"),
+                    (error) => console.error("mute failed", error)
+                );
+            },
+
+            setVolume: function (level: number) {
+                session.setReceiverVolumeLevel(
+                    level,
+                    () => console.debug("set volume", level),
+                    (error) => console.error("set volume failed", error)
+                );
+            },
+
+            unmute: function () {
+                session.setReceiverMuted(
+                    false,
+                    () => console.debug("unmuted"),
+                    (error) => console.error("unmute failed", error)
+                );
+            },
         };
+    }
+
+    function onMedia(media: chrome.cast.media.Media) {
+        if (currentTimeIntervalId) {
+            window.clearInterval(currentTimeIntervalId);
+        }
+
+        currentTimeIntervalId = window.setInterval(() => {
+            const currentTime = media.getEstimatedTime();
+            console.debug("current time", currentTime);
+            state = { ...state, currentTime };
+        }, 1000);
+
+        const updateListener = mediaUpdateListener.bind(media);
+        media.addUpdateListener(updateListener);
+        updateListener();
+    }
+
+    function mediaUpdateListener() {
+        const media: chrome.cast.media.Media = this;
+
+        state = {
+            ...state,
+            canPause: media.supportsCommand(MediaCommand.PAUSE),
+            canSeek: media.supportsCommand(MediaCommand.SEEK),
+            duration: media.media.duration,
+            playerState: media.playerState,
+
+            pause: function () {
+                media.pause(
+                    new PauseRequest(),
+                    () => console.debug("paused"),
+                    (error) => console.error("pause failed", error)
+                );
+            },
+
+            play: function () {
+                media.play(
+                    new PlayRequest(),
+                    () => console.debug("playing"),
+                    (error) => console.error("play failed", error)
+                );
+            },
+
+            seek: function (currentTime: number) {
+                const request = new SeekRequest();
+                request.currentTime = currentTime;
+                media.seek(
+                    request,
+                    () => console.debug("seek", request.currentTime),
+                    (error) => console.error("seek failed", error)
+                );
+            },
+        };
+    }
+
+    async function loadMedia(castSession: cast.framework.CastSession | null) {
+        if (!castSession) {
+            return;
+        }
+
+        const session = castSession.getSessionObj();
+        const updateListener = sessionUpdateListener.bind(session);
+        session.addUpdateListener(updateListener);
+        updateListener();
 
         const localIp = await server.getLocalIpAsync();
         const base = `${location.protocol}//${localIp}:${location.port}`;
-
-        console.info("base path", base);
-        console.info("playing video", filePath);
-        console.info("subtitles path", subtitlesUrl);
-
-        const loadRequest = createLoadRequest(base, filePath, subtitlesUrl);
-
-        try {
-            await castSession.loadMedia(loadRequest);
-            console.info("media loaded");
-        } catch (e) {
-            console.error("failed to load media", e);
-            return;
-        }
-
-        // enable subtitles
-        let media;
-
-        try {
-            media = await castSession.getMediaSession();
-            console.debug("retrieved media session");
-        } catch (e) {
-            console.error("failed to load media session", e);
-            return;
-        }
-
-        const tracksInfoRequest = new EditTracksInfoRequest([1]);
-
-        try {
-            await media.editTracksInfo(tracksInfoRequest);
-            console.info("subtitles loaded");
-        } catch (e) {
-            console.warn("failed to set subtitle track", e);
-        }
-    }
-
-    function createLoadRequest(
-        base: string,
-        filePath: string,
-        subtitlesUrl: string | null
-    ) {
-        const videoPath = `/video/${encodeURIComponent(filePath)}`;
-        const mediaInfo = new MediaInfo(`${base}${videoPath}`, "video/mp4");
+        const videoPath = `video/${encodeURIComponent(filePath)}`;
+        const mediaInfo = new MediaInfo(`${base}/${videoPath}`, "video/mp4");
         mediaInfo.duration = null;
         mediaInfo.metadata = new MovieMediaMetadata();
         mediaInfo.streamType = StreamType.BUFFERED;
-        mediaInfo.tracks = getTracks(base, subtitlesUrl);
+        mediaInfo.tracks = [];
         mediaInfo.textTrackStyle = new TextTrackStyle();
         mediaInfo.textTrackStyle.backgroundColor = "#000000CC";
-        return new LoadRequest(mediaInfo);
-    }
 
-    function getTracks(base: string, subtitlesUrl: string | null) {
         if (subtitlesUrl) {
             const encoded = encodeURIComponent(subtitlesUrl);
             const subtitlesPath = `/subtitles/download/${encoded}`;
@@ -209,65 +253,23 @@
             sub.name = "English Subtitles";
             sub.language = "en-US";
             sub.customData = null;
-            return [sub];
-        } else {
-            return [];
-        }
-    }
-
-    function seek(e: CustomEvent<number>) {
-        if (!player.canSeek) {
-            console.warn("cannot seek");
-            return;
+            mediaInfo.tracks.push(sub);
         }
 
-        const previousTime = player.currentTime;
-        const newTime = e.detail;
-        player.currentTime = newTime;
+        const loadRequest = new LoadRequest(mediaInfo);
 
-        try {
-            playerController.seek();
-            console.log(`seek from ${previousTime} to ${newTime}`);
-        } catch (e) {
-            console.error(e);
-        }
-    }
+        // activate first, if any, subtitles track
+        loadRequest.activeTrackIds = mediaInfo.tracks
+            .slice(0, 1)
+            .map((track) => track.trackId);
 
-    function setVolume(e: CustomEvent<number>) {
-        if (!player.canControlVolume) {
-            console.warn("cannot control volume");
-            return false;
-        }
-
-        const previousVolumeLevel = player.volumeLevel;
-        const newVolumeLevel = e.detail;
-        player.volumeLevel = newVolumeLevel;
-
-        try {
-            playerController.setVolumeLevel();
-            console.log(
-                `volume changed from ${previousVolumeLevel} to ${newVolumeLevel}`
-            );
-        } catch (e) {
-            console.error(e);
-        }
-    }
-
-    function mute() {
-        playerController.muteOrUnmute();
-    }
-
-    function play() {
-        playerController.playOrPause();
-    }
-
-    async function reload() {
-        await loadMedia();
+        session.loadMedia(loadRequest, onMedia, function (error) {
+            console.error("failed to load media", error);
+        });
     }
 
     function disconnect() {
-        const context = CastContext.getInstance();
-        const castSession = context.getCurrentSession();
+        const castSession = castContext.getCurrentSession();
 
         if (castSession) {
             castSession.endSession(true);
@@ -280,13 +282,4 @@
     }
 </script>
 
-<VideoPlayerView
-    {fileName}
-    {...state}
-    on:mute={mute}
-    on:play={play}
-    on:reload={reload}
-    on:seek={seek}
-    on:home={home}
-    on:setvolume={setVolume}
-/>
+<VideoPlayerView {fileName} {image} {...state} on:home={home} />
