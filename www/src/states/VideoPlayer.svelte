@@ -1,17 +1,17 @@
 <script lang="ts">
+    /// <reference types="chromecast-caf-sender" />
     import { createEventDispatcher, onMount, onDestroy } from "svelte";
     import * as server from "../server";
     import VideoPlayerView from "./VideoPlayerView.svelte";
 
     const {
         CastContext,
+        LoggerLevel,
         RemotePlayer,
         RemotePlayerController,
         RemotePlayerEventType,
-        // @ts-ignore
     } = cast.framework;
 
-    // @ts-ignore
     const { AutoJoinPolicy } = chrome.cast;
 
     const {
@@ -25,7 +25,6 @@
         Track,
         TrackType,
         DEFAULT_MEDIA_RECEIVER_APP_ID,
-        // @ts-ignore
     } = chrome.cast.media;
 
     const dispatch = createEventDispatcher();
@@ -53,6 +52,8 @@
         //
         // cast setup
         //
+        cast.framework.setLoggerLevel(LoggerLevel.DEBUG);
+
         const context = CastContext.getInstance();
 
         context.setOptions({
@@ -187,8 +188,7 @@
         subtitlesUrl: string | null
     ) {
         const videoPath = `/video/${encodeURIComponent(filePath)}`;
-        const mediaInfo = new MediaInfo(`${base}${videoPath}`);
-        mediaInfo.contentType = "video/mp4";
+        const mediaInfo = new MediaInfo(`${base}${videoPath}`, "video/mp4");
         mediaInfo.duration = null;
         mediaInfo.metadata = new MovieMediaMetadata();
         mediaInfo.streamType = StreamType.BUFFERED;
