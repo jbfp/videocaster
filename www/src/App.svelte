@@ -52,7 +52,7 @@
 </script>
 
 <header>
-    <h1 class="flex-horizontal">Videocaster</h1>
+    <h1>Videocaster</h1>
 </header>
 
 {#if ready}
