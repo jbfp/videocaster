@@ -1,4 +1,5 @@
-/.vscode
-/target
+/.vscode/
+/target/
 *.log
-Videocaster.toml
+/dpkg/usr/
+*.deb

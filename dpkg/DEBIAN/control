@@ -1,0 +1,10 @@
+Package: videocaster
+Version: 1.0-0
+Section: base
+Priority: optional
+Architecture: amd64
+Depends: google-chrome-stable
+Recommends: ffmpeg
+Maintainer: jbfp <jakob@jbfp.dk>
+Description: Videocaster
+ Cast local video files to Chromecast targets
