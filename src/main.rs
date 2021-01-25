@@ -38,18 +38,17 @@ use rocket::{
     Config, Rocket, Shutdown,
 };
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
-use tokio::process::Command;
+use std::path::{Path, PathBuf};
+use tokio::{io::AsyncWriteExt, process::Command};
 
-const QUALIFIER: &str = "dk";
-const ORGANIZATION: &str = "jbfp";
-const APPLICATION: &str = "Videocaster";
 const CONFIG_PATH: &str = "Videocaster.toml";
 const ENV_PREFIX: &str = "VIDEOCASTER_";
 
 #[rocket::main]
 async fn main() -> Result<()> {
+    let config_path = create_config_file().await?;
     let _ = configure_logging();
-    let rocket = create_rocket();
+    let rocket = create_rocket(&config_path);
     let config = rocket.config().clone();
     let chrome = start_google_chrome(&config);
     let server = start_rocket(rocket);
@@ -93,9 +92,33 @@ fn configure_logging() -> Result<()> {
     Ok(())
 }
 
-fn create_rocket() -> Rocket {
+async fn create_config_file() -> Result<PathBuf> {
+    let dirs = open_project_dirs().ok_or_else(|| anyhow!("failed to open project dirs"))?;
+    let mut path = dirs.config_dir().to_path_buf();
+    path.push(CONFIG_PATH);
+
+    debug!("config file path: {}", path.display());
+
+    let file = tokio::fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open(&path)
+        .await;
+
+    if let Ok(mut file) = file {
+        let default_config = include_bytes!("../Release.toml");
+        file.write_all(default_config).await?;
+        info!("re-created default config file");
+    } else {
+        debug!("config file exists, won't overwrite");
+    }
+
+    Ok(path)
+}
+
+fn create_rocket<P: AsRef<Path>>(config_path: P) -> Rocket {
     let figment = Figment::from(Config::default())
-        .merge(Toml::file(CONFIG_PATH).nested())
+        .merge(Toml::file(config_path).nested())
         .merge(Env::prefixed(ENV_PREFIX).global());
 
     let rocket = rocket::custom(figment);
@@ -159,7 +182,7 @@ async fn start_google_chrome(config: &Config) {
     };
 
     let user_data_dir = {
-        if let Some(dirs) = ProjectDirs::from(QUALIFIER, ORGANIZATION, APPLICATION) {
+        if let Some(dirs) = open_project_dirs() {
             let path = dirs.config_dir().display();
             info!("project config dir: {}", path);
             format!("--user-data-dir={}", path)
@@ -177,4 +200,11 @@ async fn start_google_chrome(config: &Config) {
         Ok(exit) => info!("google chrome stopped with code {}", exit),
         Err(err) => error!("failed to open google chrome: {}", err),
     }
+}
+
+fn open_project_dirs() -> Option<ProjectDirs> {
+    const QUALIFIER: &str = "dk";
+    const ORGANIZATION: &str = "jbfp";
+    const APPLICATION: &str = "Videocaster";
+    ProjectDirs::from(QUALIFIER, ORGANIZATION, APPLICATION)
 }
