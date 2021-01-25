@@ -33,12 +33,6 @@
         }
         "Entry"
         {
-        "MsmKey" = "8:_C98C89895BB44E40826567DAF489B3FF"
-        "OwnerKey" = "8:_UNDEFINED"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
         "MsmKey" = "8:_DAE597F893794147BA44D952EAD997CA"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
@@ -190,26 +184,6 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_C98C89895BB44E40826567DAF489B3FF"
-            {
-            "SourcePath" = "8:..\\Release.toml"
-            "TargetName" = "8:Videocaster.toml"
-            "Tag" = "8:"
-            "Folder" = "8:_7E31BD1BD2BC418EB7372AFB83C6A5EB"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_DAE597F893794147BA44D952EAD997CA"
             {
             "SourcePath" = "8:..\\bin\\ffmpeg\\LICENSE"
@@ -287,7 +261,7 @@
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:Videocaster"
         "ProductCode" = "8:{544DE57A-D193-45C3-862A-8899AD4BE7A6}"
-        "PackageCode" = "8:{AA01C629-0053-47D9-820B-9AE639C08759}"
+        "PackageCode" = "8:{332F1593-B57E-4680-97FE-1E9445F683F5}"
         "UpgradeCode" = "8:{E74930F2-77AA-450C-BC5C-F6BC9626BFD9}"
         "AspNetVersion" = "8:2.0.50727.0"
         "RestartWWWService" = "11:FALSE"
