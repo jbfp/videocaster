@@ -191,7 +191,7 @@
     <em class="muted fill">This folder is empty</em>
 {/if}
 
-<div class="flex-horizontal">
+<div class="flex flex-horizontal">
     <button disabled={nextDisabled} on:click={next}>Next</button>
 
     {#if selectedFileName}
@@ -201,8 +201,8 @@
 
 <style>
     ul {
-        margin: 0;
-        padding-left: 1em;
+        margin: 0 -1em;
+        padding-left: 2em;
         overflow-y: scroll;
     }
 
@@ -241,6 +241,10 @@
     }
 
     @media (prefers-color-scheme: dark) {
+        ul {
+            background-color: rgb(53, 54, 58);
+        }
+
         .file-list-item[data-type="dir"] {
             list-style: url("data:image/svg+xml,%3Csvg version='1.1' xmlns='http://www.w3.org/2000/svg' x='0px' y='0px' viewBox='0 0 408 408'%3E%3Cpath style='fill: white' d='M372,88.661H206.32l-33-39.24c-0.985-1.184-2.461-1.848-4-1.8H36c-19.956,0.198-36.023,16.443-36,36.4v240 c-0.001,19.941,16.06,36.163,36,36.36h336c19.94-0.197,36.001-16.419,36-36.36v-199C408.001,105.08,391.94,88.859,372,88.661z'/%3E%3C/svg%3E");
         }

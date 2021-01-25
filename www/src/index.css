@@ -87,20 +87,46 @@ button {
 
 .flex {
     display: flex;
-    align-items: center;
-    gap: 0.5em;
+    gap: 0.75em;
+}
+
+.flex-vertical {
+    flex-direction: column;
+    justify-items: center;
 }
 
 .flex-horizontal {
-    display: flex;
     align-items: center;
-    gap: 0.5em;
     flex-direction: row;
 }
 
 @media (prefers-color-scheme: dark) {
     html {
-        background-color: rgb(34, 34, 34);
+        background-color: rgb(32, 33, 36);
+    }
+
+    input,
+    select {
+        background-color: rgb(53, 54, 58);
+        border: none;
+        transition: background-color 200ms ease-in-out;
+    }
+
+    input:hover {
+        background-color: rgb(41, 42, 45);
+    }
+
+    select:focus,
+    input:focus {
+        outline: 2px solid rgb(64, 77, 100);
+    }
+
+    :-webkit-autofill,
+    :-webkit-autofill:hover, 
+    :-webkit-autofill:focus,
+    :-internal-autofill-selected {
+        /* chrome is overriding colors on autofill :( */
+        box-shadow: 0 0 0px 1000px rgb(53, 54, 58) inset;
     }
 
     button:disabled {
