@@ -1,6 +1,5 @@
 <script lang="ts">
     /// <reference types="chromecast-caf-sender" />
-    import { createEventDispatcher } from "svelte";
     import IconButton from "../IconButton.svelte";
     import Range from "../Range.svelte";
 
@@ -13,11 +12,12 @@
     export let duration: number;
     export let fileName: string;
     export let image: string;
-    export let isMuted: boolean;
+    export let muted: boolean;
     export let playerState: string;
     export let receiver: string;
     export let volume: number;
     export let volumeStepInterval: number;
+    export let goHome: () => void;
     export let mute: () => void;
     export let pause: () => void;
     export let play: () => void;
@@ -32,18 +32,12 @@
         return new Date(x * 1000).toISOString().substr(from, length);
     };
 
-    const dispatch = createEventDispatcher();
-
     function onseek(e: CustomEvent<number>) {
         seek?.(e.detail);
     }
 
     function onsetvolume(e: CustomEvent<number>) {
         setVolume?.(e.detail);
-    }
-
-    function home() {
-        dispatch("home");
     }
 </script>
 
@@ -62,7 +56,7 @@
     <IconButton
         icon={"home"}
         title="Stop video and go to start"
-        on:click={home}
+        on:click={goHome}
     />
 
     <google-cast-launcher />
@@ -95,7 +89,7 @@
         {/if}
     </div>
 
-    {#if isMuted}
+    {#if muted}
         <IconButton
             icon="volume_off"
             on:click={unmute}

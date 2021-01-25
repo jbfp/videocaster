@@ -21,14 +21,13 @@
         TrackType,
     } = chrome.cast.media;
 
-    const dispatch = createEventDispatcher();
-
     export let filePath: string;
     export let subtitlesUrl: string;
 
     $: fileName = filePath.split("__sep").pop();
 
-    const castContext = CastContext.getInstance();
+    const dispatch = createEventDispatcher();
+    const goHome = () => dispatch("home");
 
     const defaultState = {
         canPause: null,
@@ -36,7 +35,8 @@
         canChangeVolume: null,
         currentTime: null,
         duration: null,
-        isMuted: null,
+        goHome,
+        muted: null,
         mute: null,
         pause: null,
         play: null,
@@ -52,20 +52,24 @@
     let state = { ...defaultState };
     let image: string;
     let currentTimeIntervalId: number | null = null;
+    let leaveSession: () => void;
 
     onMount(async () => {
-        loadFrame();
+        server
+            .getVideoFrame(filePath)
+            .then((img) => (image = img))
+            .catch((error) => console.error("loading preview failed", error));
 
         if (!window["__isGCastApiAvailable"]) {
             console.error("chromecast not available");
             return;
         }
 
-        window.addEventListener("beforeunload", onbeforeunload);
+        const castContext = CastContext.getInstance();
 
         castContext.addEventListener(
             CastContextEventType.SESSION_STATE_CHANGED,
-            onSessionStateChanged
+            sessionStateChanged
         );
 
         let castSession = castContext.getCurrentSession();
@@ -82,44 +86,42 @@
             castSession = castContext.getCurrentSession();
         }
 
-        loadMedia(castSession);
+        await loadMedia(castSession?.getSessionObj());
     });
 
     onDestroy(() => {
         window.clearInterval(currentTimeIntervalId);
 
-        window.removeEventListener("beforeunload", onbeforeunload);
+        window.removeEventListener("beforeunload", leaveSession);
 
-        castContext.removeEventListener(
+        CastContext.getInstance().removeEventListener(
             CastContextEventType.SESSION_STATE_CHANGED,
-            onSessionStateChanged
+            sessionStateChanged
         );
     });
 
-    function onbeforeunload() {
-        disconnect();
-    }
-
-    async function loadFrame() {
-        try {
-            image = await server.getVideoFrame(filePath);
-        } catch (e) {
-            console.error("error loading preview frame", e);
-        }
-    }
-
-    async function onSessionStateChanged(
-        e: cast.framework.SessionStateEventData
-    ) {
+    function sessionStateChanged(e: cast.framework.SessionStateEventData) {
         console.debug("SESSION_STATE_CHANGED", e);
 
         if (e.sessionState === SessionState.SESSION_STARTED) {
-            await loadMedia(e.session);
+            const session = e.session.getSessionObj();
+
+            window.addEventListener(
+                "beforeunload",
+                (leaveSession = function () {
+                    session.leave(
+                        () => console.debug("left session"),
+                        (error) => console.error("leave failed", error)
+                    );
+                }.bind(undefined, [session]))
+            );
+
+            loadMedia(session);
         } else {
+            window.removeEventListener("beforeunload", leaveSession);
             window.clearInterval(currentTimeIntervalId);
             currentTimeIntervalId = null;
-            await tick();
-            state = { ...defaultState };
+            tick().then(() => (state = { ...defaultState }));
         }
     }
 
@@ -137,10 +139,15 @@
         state = {
             ...state,
             canChangeVolume,
-            isMuted: volume.muted,
+            muted: volume.muted,
             receiver: receiver.friendlyName,
             volume: volume.level,
             volumeStepInterval,
+
+            goHome: function () {
+                leaveSession();
+                goHome();
+            },
 
             mute: function () {
                 session.setReceiverMuted(
@@ -169,6 +176,8 @@
     }
 
     function onMedia(media: chrome.cast.media.Media) {
+        console.debug("media loaded");
+
         if (currentTimeIntervalId) {
             window.clearInterval(currentTimeIntervalId);
         }
@@ -222,12 +231,11 @@
         };
     }
 
-    async function loadMedia(castSession: cast.framework.CastSession | null) {
-        if (!castSession) {
+    async function loadMedia(session: chrome.cast.Session | null) {
+        if (!session) {
             return;
         }
 
-        const session = castSession.getSessionObj();
         const updateListener = sessionUpdateListener.bind(session);
         session.addUpdateListener(updateListener);
         updateListener();
@@ -267,19 +275,6 @@
             console.error("failed to load media", error);
         });
     }
-
-    function disconnect() {
-        const castSession = castContext.getCurrentSession();
-
-        if (castSession) {
-            castSession.endSession(true);
-        }
-    }
-
-    function home() {
-        disconnect();
-        dispatch("home");
-    }
 </script>
 
-<VideoPlayerView {fileName} {image} {...state} on:home={home} />
+<VideoPlayerView {fileName} {image} {...state} />
