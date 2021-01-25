@@ -87,8 +87,10 @@ fn configure_logging() -> Result<()> {
 }
 
 #[cfg(debug_assertions)]
+#[allow(clippy::clippy::unnecessary_wraps)] // maintain compatibility with fallible release version
 fn configure_logging() -> Result<()> {
-    Ok(simple_logging::log_to_stderr(LevelFilter::Debug))
+    simple_logging::log_to_stderr(LevelFilter::Debug);
+    Ok(())
 }
 
 fn create_rocket() -> Rocket {
