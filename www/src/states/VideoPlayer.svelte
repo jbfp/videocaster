@@ -4,23 +4,6 @@
     import * as server from "../server";
     import VideoPlayerView from "./VideoPlayerView.svelte";
 
-    const { CastContext, CastContextEventType, SessionState } = cast.framework;
-
-    const {
-        LoadRequest,
-        MediaCommand,
-        MediaInfo,
-        MovieMediaMetadata,
-        PauseRequest,
-        PlayRequest,
-        SeekRequest,
-        StreamType,
-        TextTrackStyle,
-        TextTrackType,
-        Track,
-        TrackType,
-    } = chrome.cast.media;
-
     export let filePath: string;
     export let subtitlesUrl: string;
 
@@ -60,15 +43,16 @@
             .then((img) => (image = img))
             .catch((error) => console.error("loading preview failed", error));
 
-        if (!window["__isGCastApiAvailable"]) {
-            console.error("chromecast not available");
-            return;
-        }
+        const castContext = cast.framework.CastContext.getInstance();
 
-        const castContext = CastContext.getInstance();
+        castContext.setOptions({
+            autoJoinPolicy: chrome.cast.AutoJoinPolicy.TAB_AND_ORIGIN_SCOPED,
+            receiverApplicationId:
+                chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+        });
 
         castContext.addEventListener(
-            CastContextEventType.SESSION_STATE_CHANGED,
+            cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
             sessionStateChanged
         );
 
@@ -94,8 +78,8 @@
 
         window.removeEventListener("beforeunload", leaveSession);
 
-        CastContext.getInstance().removeEventListener(
-            CastContextEventType.SESSION_STATE_CHANGED,
+        cast.framework.CastContext.getInstance().removeEventListener(
+            cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
             sessionStateChanged
         );
     });
@@ -103,7 +87,7 @@
     function sessionStateChanged(e: cast.framework.SessionStateEventData) {
         console.debug("SESSION_STATE_CHANGED", e);
 
-        if (e.sessionState === SessionState.SESSION_STARTED) {
+        if (e.sessionState === cast.framework.SessionState.SESSION_STARTED) {
             const session = e.session.getSessionObj();
 
             window.addEventListener(
@@ -198,14 +182,16 @@
 
         state = {
             ...state,
-            canPause: media.supportsCommand(MediaCommand.PAUSE),
-            canSeek: media.supportsCommand(MediaCommand.SEEK),
+            canPause: media.supportsCommand(
+                chrome.cast.media.MediaCommand.PAUSE
+            ),
+            canSeek: media.supportsCommand(chrome.cast.media.MediaCommand.SEEK),
             duration: media.media.duration,
             playerState: media.playerState,
 
             pause: function () {
                 media.pause(
-                    new PauseRequest(),
+                    new chrome.cast.media.PauseRequest(),
                     () => console.debug("paused"),
                     (error) => console.error("pause failed", error)
                 );
@@ -213,14 +199,14 @@
 
             play: function () {
                 media.play(
-                    new PlayRequest(),
+                    new chrome.cast.media.PlayRequest(),
                     () => console.debug("playing"),
                     (error) => console.error("play failed", error)
                 );
             },
 
             seek: function (currentTime: number) {
-                const request = new SeekRequest();
+                const request = new chrome.cast.media.SeekRequest();
                 request.currentTime = currentTime;
                 media.seek(
                     request,
@@ -243,28 +229,37 @@
         const localIp = await server.getLocalIpAsync();
         const base = `${location.protocol}//${localIp}:${location.port}`;
         const videoPath = `video/${encodeURIComponent(filePath)}`;
-        const mediaInfo = new MediaInfo(`${base}/${videoPath}`, "video/mp4");
+        const contentId = `${base}/${videoPath}`;
+        const contentType = "video/mp4";
+        const mediaInfo = new chrome.cast.media.MediaInfo(
+            contentId,
+            contentType
+        );
         mediaInfo.duration = null;
-        mediaInfo.metadata = new MovieMediaMetadata();
-        mediaInfo.streamType = StreamType.BUFFERED;
+        mediaInfo.metadata = new chrome.cast.media.MovieMediaMetadata();
+        mediaInfo.streamType = chrome.cast.media.StreamType.BUFFERED;
         mediaInfo.tracks = [];
-        mediaInfo.textTrackStyle = new TextTrackStyle();
+        mediaInfo.textTrackStyle = new chrome.cast.media.TextTrackStyle();
         mediaInfo.textTrackStyle.backgroundColor = "#000000CC";
 
         if (subtitlesUrl) {
             const encoded = encodeURIComponent(subtitlesUrl);
             const subtitlesPath = `/subtitles/download/${encoded}`;
-            const sub = new Track(1, TrackType.TEXT);
+            const trackId = 1;
+            const sub = new chrome.cast.media.Track(
+                trackId,
+                chrome.cast.media.TrackType.TEXT
+            );
             sub.trackContentId = `${base}${subtitlesPath}`;
             sub.trackContentType = "text/vtt";
-            sub.subtype = TextTrackType.SUBTITLES;
+            sub.subtype = chrome.cast.media.TextTrackType.SUBTITLES;
             sub.name = "English Subtitles";
             sub.language = "en-US";
             sub.customData = null;
             mediaInfo.tracks.push(sub);
         }
 
-        const loadRequest = new LoadRequest(mediaInfo);
+        const loadRequest = new chrome.cast.media.LoadRequest(mediaInfo);
 
         // activate first, if any, subtitles track
         loadRequest.activeTrackIds = mediaInfo.tracks
