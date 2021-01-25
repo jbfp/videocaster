@@ -28,9 +28,11 @@ mod subtitles;
 use anyhow::Result;
 use directories_next::ProjectDirs;
 use futures::future;
+use log::LevelFilter;
 use rocket::{http::Method, Shutdown};
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 use std::env::var;
+use std::time;
 use tokio::process::Command;
 
 const QUALIFIER: &str = "dk";
@@ -39,7 +41,12 @@ const APPLICATION: &str = "Videocaster";
 
 #[rocket::main]
 async fn main() -> Result<()> {
+    if cfg!(profile = "release") {
+        let _ = configure_logging();
+    } else {
     pretty_env_logger::try_init()?;
+    }
+
     let rocket = start_rocket();
     let chrome = start_google_chrome();
 
@@ -62,6 +69,15 @@ async fn main() -> Result<()> {
 #[post("/shutdown")]
 pub(crate) async fn shutdown(shutdown: Shutdown) {
     shutdown.shutdown()
+}
+
+fn configure_logging() -> Result<()> {
+    let timestamp = time::UNIX_EPOCH.elapsed().unwrap_or_default().as_secs();
+    let file_name = format!("videocaster_{:#?}", timestamp);
+    let mut path = std::env::temp_dir();
+    path.push(file_name);
+    path.set_extension("log");
+    Ok(simple_logging::log_to_file(&path, LevelFilter::Debug)?)
 }
 
 async fn start_rocket() {
