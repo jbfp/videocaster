@@ -29,6 +29,7 @@ use anyhow::Result;
 use directories_next::ProjectDirs;
 use futures::future;
 use log::LevelFilter;
+use packer::Packer;
 use rocket::{http::Method, Shutdown};
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 use std::env::var;
@@ -44,8 +45,13 @@ async fn main() -> Result<()> {
     if cfg!(profile = "release") {
         let _ = configure_logging();
     } else {
-    pretty_env_logger::try_init()?;
+        pretty_env_logger::try_init()?;
     }
+
+    debug!(
+        "static files: {:#?}",
+        static_files::StaticFiles::list().collect::<Vec<_>>()
+    );
 
     let rocket = start_rocket();
     let chrome = start_google_chrome();
@@ -143,11 +149,7 @@ async fn start_google_chrome() {
         }
     };
 
-    let args = [
-        &app,
-        &user_data_dir,
-        "--no-default-browser-check",
-    ];
+    let args = [&app, &user_data_dir, "--no-default-browser-check"];
 
     debug!("chrome args: {:#?}", args);
 
