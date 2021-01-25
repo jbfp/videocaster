@@ -1,4 +1,5 @@
 #![feature(decl_macro, proc_macro_hygiene, str_split_once)]
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 #[macro_use]
 extern crate anyhow;
