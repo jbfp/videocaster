@@ -11,7 +11,7 @@
     export let currentTime: number;
     export let duration: number;
     export let fileName: string;
-    export let image: string;
+    export let image: string = null;
     export let muted: boolean;
     export let playerState: string;
     export let receiver: string;
@@ -129,6 +129,10 @@
         margin: 1em -1em;
         object-fit: cover;
         height: 0;
+    }
+
+    img:not([src]) {
+        visibility: hidden;
     }
 
     .volume {
