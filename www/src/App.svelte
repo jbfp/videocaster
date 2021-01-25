@@ -14,11 +14,7 @@
     $: filePath = `${directory}__sep${fileName}`;
 
     $: state =
-        !directory || fileName === null
-            ? 0
-            : subtitlesUrl === null
-            ? 1
-            : 2;
+        !directory || fileName === null ? 0 : subtitlesUrl === null ? 1 : 2;
 
     onMount(() => {
         const args = location.pathname.slice(1).split("/").map(decode);
@@ -34,6 +30,8 @@
             "",
             `${location.pathname}/${encode(fileName)}`
         );
+
+        window.addEventListener("popstate", onpopstate);
     }
 
     function subtitlesPickerNext() {
@@ -44,10 +42,21 @@
         );
     }
 
+    function catchBack() {
+        history.back();
+    }
+
     function catchHome() {
         fileName = null;
         subtitlesUrl = null;
         history.pushState({ directory }, "", "/");
+        window.removeEventListener("popstate", onpopstate);
+    }
+
+    function onpopstate(e: PopStateEvent) {
+        directory = e.state.directory || null;
+        fileName = e.state.fileName || null;
+        subtitlesUrl = e.state.subtitlesUrl || null;
     }
 </script>
 
@@ -66,7 +75,12 @@
             on:home={catchHome}
         />
     {:else if state === 2}
-        <VideoPlayer {filePath} {subtitlesUrl} on:home={catchHome} />
+        <VideoPlayer
+            {filePath}
+            {subtitlesUrl}
+            on:back={catchBack}
+            on:home={catchHome}
+        />
     {/if}
 {/if}
 

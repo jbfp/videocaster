@@ -17,6 +17,7 @@
     export let receiver: string;
     export let volume: number;
     export let volumeStepInterval: number;
+    export let goBack: () => void;
     export let goHome: () => void;
     export let mute: () => void;
     export let pause: () => void;
@@ -57,6 +58,12 @@
         icon={"home"}
         title="Stop video and go to start"
         on:click={goHome}
+    />
+
+    <IconButton
+        icon={"arrow_back"}
+        title="Go back"
+        on:click={goBack}
     />
 
     <google-cast-launcher />

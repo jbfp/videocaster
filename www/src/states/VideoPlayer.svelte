@@ -10,6 +10,7 @@
     $: fileName = filePath.split("__sep").pop();
 
     const dispatch = createEventDispatcher();
+    const goBack = () => dispatch("back");
     const goHome = () => dispatch("home");
 
     const defaultState = {
@@ -18,6 +19,7 @@
         canChangeVolume: null,
         currentTime: null,
         duration: null,
+        goBack,
         goHome,
         muted: null,
         mute: null,
