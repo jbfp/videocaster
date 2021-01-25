@@ -14,14 +14,6 @@ pub(crate) async fn handler(path: String) -> Result<Content<Vec<u8>>, Debug<Erro
 }
 
 async fn extract_jpeg(path: &str) -> Result<Vec<u8>, Error> {
-    debug!("video path: {}", path);
-
-    let ffmpeg = if cfg!(target_os = "windows") {
-        "ffmpeg.exe"
-    } else {
-        "ffmpeg"
-    };
-
     let args = [
         "-ss",          // seek to
         "00:00:30",     // 30 seconds
@@ -40,7 +32,7 @@ async fn extract_jpeg(path: &str) -> Result<Vec<u8>, Error> {
 
     debug!("ffmpeg args: {:#?}", args);
 
-    let output = Command::new(ffmpeg).args(&args).output().await?;
+    let output = create_command().args(&args).output().await?;
 
     if output.status.success() {
         if let Err(e) = String::from_utf8(output.stdout) {
@@ -62,4 +54,17 @@ async fn extract_jpeg(path: &str) -> Result<Vec<u8>, Error> {
         let e = String::from_utf8_lossy(&stderr);
         Err(anyhow!(e.to_string()))
     }
+}
+
+#[cfg(target_os = "windows")]
+fn create_command() -> Command {
+    const CREATE_NO_WINDOW: u32 = 0x08000000;
+    let mut command = Command::new("ffmpeg.exe");
+    command.creation_flags(CREATE_NO_WINDOW);
+    command
+}
+
+#[cfg(not(target_os = "windows"))]
+fn create_command() -> Command {
+    Command::new("ffmpeg")
 }
