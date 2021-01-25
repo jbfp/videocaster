@@ -29,44 +29,42 @@ use anyhow::Result;
 use directories_next::ProjectDirs;
 use futures::future;
 use log::LevelFilter;
-use packer::Packer;
-use rocket::{http::Method, Shutdown};
+use rocket::{
+    figment::{
+        providers::{Env, Format, Toml},
+        Figment,
+    },
+    http::Method,
+    Config, Rocket, Shutdown,
+};
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
-use std::env::var;
-use std::time;
 use tokio::process::Command;
 
 const QUALIFIER: &str = "dk";
 const ORGANIZATION: &str = "jbfp";
 const APPLICATION: &str = "Videocaster";
+const CONFIG_PATH: &str = "Videocaster.toml";
+const ENV_PREFIX: &str = "VIDEOCASTER_";
 
 #[rocket::main]
 async fn main() -> Result<()> {
-    if cfg!(profile = "release") {
-        let _ = configure_logging();
-    } else {
-        pretty_env_logger::try_init()?;
-    }
-
-    debug!(
-        "static files: {:#?}",
-        static_files::StaticFiles::list().collect::<Vec<_>>()
-    );
-
-    let rocket = start_rocket();
-    let chrome = start_google_chrome();
+    let _ = configure_logging();
+    let rocket = create_rocket();
+    let config = rocket.config().clone();
+    let chrome = start_google_chrome(&config);
+    let server = start_rocket(rocket);
 
     if cfg!(target_os = "windows") {
         // Chrome on Windows returns immediately after launch. This means we can't rely
         // on closing Chrome to notify us to stop via futures. To fix this, we register
         // a handler to signal for shutdown. (If the server is stopped via other means,
         // Chrome won't be closed automatically.)
-        future::join(rocket, chrome).await;
+        future::join(server, chrome).await;
     } else {
         // Chrome on not-Windows does not return until the last window is closed. If the
         // server is closed via ctrl+c, we also close Chrome automatically.
-        pin_mut!(rocket, chrome);
-        future::select(rocket, chrome).await;
+        pin_mut!(server, chrome);
+        future::select(server, chrome).await;
     };
 
     Ok(())
@@ -77,16 +75,29 @@ pub(crate) async fn shutdown(shutdown: Shutdown) {
     shutdown.shutdown()
 }
 
+#[cfg(not(debug_assertions))]
 fn configure_logging() -> Result<()> {
+    use std::{env, time};
     let timestamp = time::UNIX_EPOCH.elapsed().unwrap_or_default().as_secs();
     let file_name = format!("videocaster_{:#?}", timestamp);
-    let mut path = std::env::temp_dir();
+    let mut path = env::temp_dir();
     path.push(file_name);
     path.set_extension("log");
     Ok(simple_logging::log_to_file(&path, LevelFilter::Debug)?)
 }
 
-async fn start_rocket() {
+#[cfg(debug_assertions)]
+fn configure_logging() -> Result<()> {
+    Ok(simple_logging::log_to_stderr(LevelFilter::Debug))
+}
+
+fn create_rocket() -> Rocket {
+    let figment = Figment::from(Config::default())
+        .merge(Toml::file(CONFIG_PATH).nested())
+        .merge(Env::prefixed(ENV_PREFIX).global());
+
+    let rocket = rocket::custom(figment);
+
     let routes = routes![
         chromecast::subtitles::handler,
         chromecast::video::handler,
@@ -101,27 +112,30 @@ async fn start_rocket() {
         subtitles::by_path::handler,
     ];
 
+    let catchers = catchers![static_files::fallback];
+
+    let config = rocket.config();
+    let port = config.port;
+    let host = format!("http://localhost:{}", port);
     let cors = CorsOptions {
-        allowed_origins: AllowedOrigins::some_exact(&["https://www.gstatic.com", &whoami()]),
-        allowed_methods: vec![Method::Get].into_iter().map(From::from).collect(),
         allowed_headers: AllowedHeaders::some(&["Accept-Encoding", "Content-Type", "Range"]),
+        allowed_methods: vec![Method::Get].into_iter().map(From::from).collect(),
+        allowed_origins: AllowedOrigins::some_exact(&["https://www.gstatic.com", &host]),
         ..Default::default()
     }
     .to_cors()
     .expect("CORS options are invalid");
 
-    let fut = rocket::ignite()
-        .mount("/", routes)
-        .register(catchers![static_files::fallback])
-        .attach(cors)
-        .launch();
+    rocket.mount("/", routes).register(catchers).attach(cors)
+}
 
-    if let Err(err) = fut.await {
-        error!("Rocket failed to launch: {}", err);
+async fn start_rocket(rocket: Rocket) {
+    if let Err(e) = rocket.launch().await {
+        error!("Rocket failed to launch: {}", e);
     }
 }
 
-async fn start_google_chrome() {
+async fn start_google_chrome(config: &Config) {
     #[cfg(target_os = "windows")]
     fn create_command() -> Command {
         const DETACHED_PROCESS: u32 = 0x00000008;
@@ -136,7 +150,11 @@ async fn start_google_chrome() {
         Command::new("google-chrome")
     }
 
-    let app = format!("--app={}", whoami());
+    let app = {
+        let port = config.port;
+        let url = format!("http://localhost:{}", port);
+        format!("--app={}", url)
+    };
 
     let user_data_dir = {
         if let Some(dirs) = ProjectDirs::from(QUALIFIER, ORGANIZATION, APPLICATION) {
@@ -157,9 +175,4 @@ async fn start_google_chrome() {
         Ok(exit) => info!("google chrome stopped with code {}", exit),
         Err(err) => error!("failed to open google chrome: {}", err),
     }
-}
-
-fn whoami() -> String {
-    let port = var("ROCKET_PORT").unwrap_or_else(|_| "8000".into());
-    format!("http://localhost:{}", port)
 }
