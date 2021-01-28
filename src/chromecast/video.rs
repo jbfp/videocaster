@@ -115,7 +115,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Range {
     async fn from_request(
         request: &'a rocket::Request<'r>,
     ) -> rocket::request::Outcome<Self, Self::Error> {
-        let range = request.headers().get_one("Range").map(|s| s.to_string());
+        let range = request.headers().get_one("Range").map(|s| s.to_owned());
 
         if let Some(range) = range {
             Outcome::Success(Range(range))

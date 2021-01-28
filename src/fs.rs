@@ -33,7 +33,7 @@ pub(crate) async fn fallback() -> Redirect {
         path
     } else {
         warn!("no user dirs found, default path will be /");
-        "/".to_string()
+        "/".to_owned()
     };
 
     Redirect::permanent(uri!(handler: path))
@@ -128,7 +128,7 @@ fn get_parent(path: &Path) -> Option<Item> {
             .and_then(|s| s.to_str())
             .or_else(|| path.to_str())
             .unwrap_or(PARENT)
-            .to_string(),
+            .to_owned(),
         path: path.to_path_buf(),
     })
 }

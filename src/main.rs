@@ -49,7 +49,7 @@ async fn main() -> Result<()> {
     let config_path = create_config_file().await?;
     let _ = configure_logging();
     let rocket = create_rocket(&config_path);
-    let config = rocket.config().clone();
+    let config = rocket.config().to_owned();
     let chrome = start_google_chrome(&config);
     let server = start_rocket(rocket);
 
@@ -188,7 +188,7 @@ async fn start_google_chrome(config: &Config) {
             format!("--user-data-dir={}", path)
         } else {
             warn!("no project dirs found, using chrome's default data dir");
-            "".to_string()
+            "".to_owned()
         }
     };
 
