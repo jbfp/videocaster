@@ -205,7 +205,4 @@ fn stop_system_idle_timer() {}
 
 #[cfg(not(target_os = "windows"))]
 fn start_system_idle_timer() {
-    unsafe {
-        crate::bindings::windows::win32::system_services::SetThreadExecutionState(ES_CONTINUOUS);
-    }
 }
