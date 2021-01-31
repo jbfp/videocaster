@@ -17,6 +17,7 @@ extern crate log;
 extern crate rocket;
 
 mod app_result;
+mod bindings;
 mod chromecast;
 mod frame;
 mod fs;

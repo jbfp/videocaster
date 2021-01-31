@@ -6,12 +6,17 @@ use rocket::{
     Response,
 };
 use std::{
-    io::SeekFrom,
+    io::{Result as IoResult, SeekFrom},
     ops::{Deref, DerefMut},
     path::PathBuf,
+    pin::Pin,
+    task::{Context, Poll},
 };
 use thiserror::Error;
-use tokio::{fs::File, io::AsyncSeekExt};
+use tokio::{
+    fs::File,
+    io::{AsyncRead, AsyncSeek, AsyncSeekExt, ReadBuf},
+};
 
 #[get("/video/<path>")]
 pub(crate) async fn handler(path: &RawStr, range: Range) -> Response<'_> {
@@ -84,7 +89,7 @@ pub(crate) async fn handler(path: &RawStr, range: Range) -> Response<'_> {
 
         debug!("size {} len {} offset {}", size, length, offset);
 
-        response.sized_body(Some(length as usize), file);
+        response.sized_body(Some(length as usize), FileWrapper::from(file));
     } else {
         response.status(Status::NotFound);
     }
@@ -128,3 +133,79 @@ impl<'a, 'r> FromRequest<'a, 'r> for Range {
 #[derive(Debug, Error)]
 #[error("Range header is missing")]
 pub(crate) struct MissingRangeHeaderError;
+
+// Only for resetting system idle timer on Drop
+// when the request has streamed what it needs to from the file.
+struct FileWrapper {
+    file: Pin<Box<File>>,
+}
+
+impl From<File> for FileWrapper {
+    fn from(file: File) -> Self {
+        stop_system_idle_timer();
+
+        Self {
+            file: Box::pin(file),
+        }
+    }
+}
+
+impl AsyncRead for FileWrapper {
+    fn poll_read(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<IoResult<()>> {
+        self.get_mut().file.as_mut().poll_read(cx, buf)
+    }
+}
+
+impl AsyncSeek for FileWrapper {
+    fn start_seek(self: Pin<&mut Self>, position: SeekFrom) -> IoResult<()> {
+        self.get_mut().file.as_mut().start_seek(position)
+    }
+
+    fn poll_complete(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<IoResult<u64>> {
+        self.get_mut().file.as_mut().poll_complete(cx)
+    }
+}
+
+impl Drop for FileWrapper {
+    fn drop(&mut self) {
+        start_system_idle_timer();
+    }
+}
+
+const ES_AWAYMODE_REQUIRED: u32 = 0x00000040;
+const ES_CONTINUOUS: u32 = 0x80000000;
+const ES_SYSTEM_REQUIRED: u32 = 0x00000001;
+
+#[cfg(target_os = "windows")]
+fn stop_system_idle_timer() {
+    debug!("stopping system idle timer");
+
+    unsafe {
+        crate::bindings::windows::win32::system_services::SetThreadExecutionState(
+            ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED,
+        );
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn start_system_idle_timer() {
+    debug!("starting system idle timer");
+
+    unsafe {
+        crate::bindings::windows::win32::system_services::SetThreadExecutionState(ES_CONTINUOUS);
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn stop_system_idle_timer() {}
+
+#[cfg(not(target_os = "windows"))]
+fn start_system_idle_timer() {
+    unsafe {
+        crate::bindings::windows::win32::system_services::SetThreadExecutionState(ES_CONTINUOUS);
+    }
+}
