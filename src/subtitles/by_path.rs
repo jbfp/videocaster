@@ -1,6 +1,6 @@
 use super::{Subtitle, DEFAULT_LANG};
 use crate::opensubs;
-use anyhow::Error;
+use anyhow::{Context, Error};
 use rocket::response::Debug;
 use rocket_contrib::json::Json;
 use std::{
@@ -27,15 +27,22 @@ pub(crate) async fn handler(path: String) -> Result<Json<Vec<Subtitle>>, Debug<E
 }
 
 fn canonicalize<P: AsRef<Path>>(path: &P) -> Result<PathBuf, Error> {
-    Ok(dunce::canonicalize(path)?)
+    Ok(dunce::canonicalize(path)
+        .with_context(|| format!("failed to canonicalize path: {:#?}", path.as_ref()))?)
 }
 
 async fn open_file<P: AsRef<Path>>(path: &P) -> Result<File, Error> {
-    Ok(File::open(path).await?)
+    Ok(File::open(path)
+        .await
+        .with_context(|| format!("failed to open file: {:#?}", path.as_ref()))?)
 }
 
 async fn file_size(file: &File) -> Result<u64, Error> {
-    Ok(file.metadata().await.map(|md| md.len())?)
+    Ok(file
+        .metadata()
+        .await
+        .with_context(|| format!("failed to load metadata for file"))
+        .map(|md| md.len())?)
 }
 
 // https://trac.opensubtitles.org/projects/opensubtitles/wiki/HashSourceCodes#RUST
