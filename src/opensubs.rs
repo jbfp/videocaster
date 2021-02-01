@@ -9,7 +9,7 @@ use reqwest::{Client, ClientBuilder};
 use serde::Deserialize;
 use std::io::Read;
 
-const USER_AGENT: &str = "videocaster 1.0.1";
+const USER_AGENT: &str = "videocaster 1.0.2";
 
 #[derive(Deserialize)]
 struct OpenSubsSubtitle {
