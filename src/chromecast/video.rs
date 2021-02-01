@@ -177,10 +177,11 @@ impl Drop for FileWrapper {
 }
 
 #[cfg(target_os = "windows")]
+#[repr(u32)]
 enum ExecutionState {
-    AwayModeRequired = 0x00000040u32,
-    Continuous = 0x80000000u32,
-    SystemRequired = 0x00000001u32,
+    AwayModeRequired = 0x00000040,
+    Continuous = 0x80000000,
+    SystemRequired = 0x00000001,
 }
 
 #[cfg(target_os = "windows")]
@@ -189,9 +190,9 @@ fn stop_system_idle_timer() {
 
     unsafe {
         crate::bindings::windows::win32::system_services::SetThreadExecutionState(
-            ExecutionState::Continuous
-                | ExecutionState::SystemRequired
-                | ExecutionState::AwayModeRequired,
+            ExecutionState::Continuous as u32
+                | ExecutionState::SystemRequired as u32
+                | ExecutionState::AwayModeRequired as u32,
         );
     }
 }
@@ -202,7 +203,7 @@ fn start_system_idle_timer() {
 
     unsafe {
         crate::bindings::windows::win32::system_services::SetThreadExecutionState(
-            ExecutionState::Continuous,
+            ExecutionState::Continuous as u32,
         );
     }
 }
