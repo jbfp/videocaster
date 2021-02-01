@@ -45,8 +45,8 @@
 
         try {
             [subtitlesByPath, subtitlesByMetadata] = await Promise.all([
-                server.searchSubsByPath(filePath),
-                server.searchSubsByMetadataAsync(title, season, episode),
+                searchSubsByPath(),
+                searchSubsByMetadataAsync(),
             ]);
         } finally {
             loading = false;
@@ -59,6 +59,30 @@
         } else {
             selectedSubtitles = undefined;
         }
+    }
+
+    async function searchSubsByPath() {
+        try {
+            return await server.searchSubsByPath(filePath);
+        } catch (e) {
+            console.error(e);
+        }
+
+        return [];
+    }
+
+    async function searchSubsByMetadataAsync() {
+        try {
+            return await server.searchSubsByMetadataAsync(
+                title,
+                season,
+                episode
+            );
+        } catch (e) {
+            console.error(e);
+        }
+
+        return [];
     }
 
     function next() {
