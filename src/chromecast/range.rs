@@ -114,7 +114,7 @@ impl HttpRange {
             })
             .collect::<Result<_, HttpRangeParseError>>()?;
 
-        let ranges: Vec<HttpRange> = all_ranges.into_iter().filter_map(|x| x).collect();
+        let ranges: Vec<HttpRange> = all_ranges.into_iter().flatten().collect();
 
         if no_overlap && ranges.is_empty() {
             return Err(NoRanges);

@@ -10,19 +10,21 @@ use std::path::PathBuf;
 #[packer(source = "www/public", prefixed = false)]
 pub(crate) struct StaticFiles;
 
-#[get("/", rank = 10)]
-pub(crate) fn index() -> Option<Content<&'static [u8]>> {
-    get_file("index.html", Some(ContentType::HTML))
-}
-
 #[get("/<path..>", rank = 10)]
-pub(crate) fn file(path: PathBuf) -> Option<Content<&'static [u8]>> {
-    get_file(&path.to_string_lossy(), None)
+pub(crate) fn file(path: Option<PathBuf>) -> Option<Content<&'static [u8]>> {
+    match path {
+        None => index(),
+        Some(path) => get_file(&path.to_string_lossy(), None),
+    }
 }
 
 #[catch(404)]
 pub(crate) fn fallback() -> Option<Custom<Content<&'static [u8]>>> {
     index().map(|content| Custom(Status::Ok, content))
+}
+
+fn index() -> Option<Content<&'static [u8]>> {
+    get_file("index.html", Some(ContentType::HTML))
 }
 
 fn get_file(file_name: &str, content_type: Option<ContentType>) -> Option<Content<&'static [u8]>> {

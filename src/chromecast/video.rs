@@ -1,7 +1,7 @@
 // https://docs.rs/crate/actix-files/0.5.0/source/src/named.rs with modifications
 use super::range::HttpRange;
 use rocket::{
-    http::{ContentType, Header, RawStr, Status},
+    http::{ContentType, Header, Status},
     request::{FromRequest, Outcome},
     Response,
 };
@@ -19,8 +19,8 @@ use tokio::{
 };
 
 #[get("/video/<path>")]
-pub(crate) async fn handler(path: &RawStr, range: Range) -> Response<'_> {
-    let path: PathBuf = path.url_decode_lossy().into();
+pub(crate) async fn handler(path: &str, range: Range) -> Response<'_> {
+    let path: PathBuf = path.into();
 
     let mut response = Response::build();
     response.header(Header::new("Accept-Ranges", "bytes"));
@@ -181,6 +181,7 @@ impl Drop for FileWrapper {
 enum ExecutionState {
     AwayModeRequired = 0x00000040,
     Continuous = 0x80000000,
+    DisplayRequired = 0x00000002,
     SystemRequired = 0x00000001,
 }
 
@@ -191,6 +192,7 @@ fn stop_system_idle_timer() {
     unsafe {
         crate::bindings::windows::win32::system_services::SetThreadExecutionState(
             ExecutionState::Continuous as u32
+                | ExecutionState::DisplayRequired as u32
                 | ExecutionState::SystemRequired as u32
                 | ExecutionState::AwayModeRequired as u32,
         );

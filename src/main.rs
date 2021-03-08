@@ -132,7 +132,6 @@ fn create_rocket<P: AsRef<Path>>(config_path: P) -> Rocket {
         fs::handler,
         ip::handler,
         shutdown,
-        static_files::index,
         static_files::file,
         subtitles::by_metadata::handler,
         subtitles::by_path::handler,

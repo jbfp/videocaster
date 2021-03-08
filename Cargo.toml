@@ -1,6 +1,6 @@
 [package]
 name = "videocaster"
-version = "1.0.2"
+version = "1.0.3"
 authors = ["jbfp <jakob@jbfp.dk>"]
 edition = "2018"
 
@@ -41,4 +41,4 @@ test-case = "1.1.0"
 [patch.crates-io]
 rocket = { git = 'https://github.com/SergioBenitez/Rocket', branch = "master" }
 rocket_contrib = { git = 'https://github.com/SergioBenitez/Rocket', branch = "master" }
-rocket_cors = { git = "https://github.com/lawliet89/rocket_cors.git", branch = "master" }
+rocket_cors = { git = "https://github.com/GeorgeScrivener/rocket_cors.git", branch = "get-param-renamed" }
