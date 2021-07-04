@@ -1,15 +1,15 @@
 use anyhow::Error;
 use rocket::{
     http::ContentType,
-    response::{Content, Debug},
+    response::{Debug, content::Custom}
 };
 use tokio::process::Command;
 
 #[get("/frame?<path>")]
-pub(crate) async fn handler(path: String) -> Result<Content<Vec<u8>>, Debug<Error>> {
+pub(crate) async fn handler(path: String) -> Result<Custom<Vec<u8>>, Debug<Error>> {
     let image = extract_jpeg(&path).await?;
     let content_type = ContentType::JPEG;
-    let content = Content(content_type, image);
+    let content = Custom(content_type, image);
     Ok(content)
 }
 
@@ -18,7 +18,7 @@ async fn extract_jpeg(path: &str) -> Result<Vec<u8>, Error> {
         "-ss",          // seek to
         "00:00:30",     // 30 seconds
         "-i",           // set input to
-        &path,          // the path of the video
+        path,          // the path of the video
         "-vframes",     // take n video frame
         "1",            // n = 1
         "-q:v",         // set output quality to

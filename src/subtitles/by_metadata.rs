@@ -2,8 +2,7 @@ use super::{Subtitle, DEFAULT_LANG};
 use crate::opensubs;
 use anyhow::Error;
 use percent_encoding::NON_ALPHANUMERIC;
-use rocket::response::Debug;
-use rocket_contrib::json::Json;
+use rocket::{response::Debug, serde::json::Json};
 
 #[get("/subtitles/by-metadata?<title>&<season>&<episode>")]
 pub(crate) async fn handler(

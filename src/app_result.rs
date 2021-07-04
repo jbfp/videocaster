@@ -1,11 +1,11 @@
 use rocket::{
     response::{Responder, Result as ResponseResult},
+    serde::json::Json,
     Request,
 };
-use rocket_contrib::json::Json;
 use serde::Serialize;
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub(crate) struct AppResult<T: Serialize> {
     success: bool,
     obj: Option<T>,

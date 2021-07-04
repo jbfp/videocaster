@@ -3,10 +3,12 @@ use super::range::HttpRange;
 use rocket::{
     http::{ContentType, Header, Status},
     request::{FromRequest, Outcome},
+    response::{Responder, Result as RocketResult},
     Response,
 };
 use std::{
-    io::{Result as IoResult, SeekFrom},
+    fs::File,
+    io::{Result as IoResult, Seek, SeekFrom},
     ops::{Deref, DerefMut},
     path::PathBuf,
     pin::Pin,
@@ -14,87 +16,98 @@ use std::{
 };
 use thiserror::Error;
 use tokio::{
-    fs::File,
-    io::{AsyncRead, AsyncSeek, AsyncSeekExt, ReadBuf},
+    fs::File as AsyncFile,
+    io::{AsyncRead, AsyncSeek, ReadBuf},
 };
 
 #[get("/video/<path>")]
-pub(crate) async fn handler(path: &str, range: Range) -> Response<'_> {
+pub(crate) async fn handler<'r>(path: &str, range: Range) -> VideoResponder {
     let path: PathBuf = path.into();
+    VideoResponder { path, range }
+}
 
-    let mut response = Response::build();
-    response.header(Header::new("Accept-Ranges", "bytes"));
+pub(crate) struct VideoResponder {
+    path: PathBuf,
+    range: Range,
+}
 
-    if let Ok(mut file) = File::open(&path).await {
-        if let Some(ext) = path.extension() {
-            let ext_str = ext.to_string_lossy();
+impl<'r> Responder<'r, 'r> for VideoResponder {
+    fn respond_to(self, _request: &'r rocket::Request<'_>) -> RocketResult<'r> {
+        let path = self.path;
+        let mut response = Response::build();
+        response.header(Header::new("Accept-Ranges", "bytes"));
 
-            if let Some(content_type) = ContentType::from_extension(&ext_str) {
-                response.header(content_type);
+        if let Ok(mut file) = File::open(&path) {
+            if let Some(ext) = path.extension() {
+                let ext_str = ext.to_string_lossy();
+
+                if let Some(content_type) = ContentType::from_extension(&ext_str) {
+                    response.header(content_type);
+                } else {
+                    warn!("no content type found for {} extension", ext_str);
+                }
             } else {
-                warn!("no content type found for {} extension", ext_str);
+                warn!("file {} does not have an extension", path.display());
             }
+
+            let size;
+
+            match file.metadata() {
+                Ok(metadata) => size = metadata.len(),
+                Err(err) => {
+                    let path = path.display();
+                    error!("failed to get metadata for file {}: {}", path, err);
+                    response.status(Status::InternalServerError);
+                    return Ok(response.finalize());
+                }
+            }
+
+            let mut length = size;
+            let mut offset = 0;
+
+            info!("range: {}", *self.range);
+
+            match HttpRange::parse(&*self.range, length) {
+                Ok(ranges) => {
+                    length = ranges[0].length;
+                    offset = ranges[0].start;
+
+                    response.header(Header::new("Content-Encoding", "identity"));
+                    response.header(Header::new(
+                        "Content-Range",
+                        format!("bytes {}-{}/{}", offset, offset + length - 1, size),
+                    ));
+                }
+                Err(err) => {
+                    warn!("range parsing error: {}", err);
+                    response.header(Header::new("Content-Range", format!("bytes */{}", length)));
+                    response.status(Status::RangeNotSatisfiable);
+                }
+            }
+
+            if offset > 0 {
+                if let Err(err) = file.seek(SeekFrom::Start(offset)) {
+                    error!("failed to seek in file {}: {}", path.display(), err);
+                    response.status(Status::InternalServerError);
+                    return Ok(response.finalize());
+                }
+            }
+
+            if offset > 0 || length < size {
+                response.status(Status::PartialContent);
+            } else {
+                response.status(Status::Ok);
+            }
+
+            debug!("size {} len {} offset {}", size, length, offset);
+
+            response.sized_body(Some(length as usize), FileWrapper::from(file));
         } else {
-            warn!("file {} does not have an extension", path.display());
+            response.status(Status::NotFound);
         }
 
-        let size;
-
-        match file.metadata().await {
-            Ok(metadata) => size = metadata.len(),
-            Err(err) => {
-                let path = path.display();
-                error!("failed to get metadata for file {}: {}", path, err);
-                response.status(Status::InternalServerError);
-                return response.finalize();
-            }
-        }
-
-        let mut length = size;
-        let mut offset = 0;
-
-        info!("range: {}", *range);
-
-        match HttpRange::parse(&*range, length) {
-            Ok(ranges) => {
-                length = ranges[0].length;
-                offset = ranges[0].start;
-
-                response.header(Header::new("Content-Encoding", "identity"));
-                response.header(Header::new(
-                    "Content-Range",
-                    format!("bytes {}-{}/{}", offset, offset + length - 1, size),
-                ));
-            }
-            Err(err) => {
-                warn!("range parsing error: {}", err);
-                response.header(Header::new("Content-Range", format!("bytes */{}", length)));
-                response.status(Status::RangeNotSatisfiable);
-            }
-        }
-
-        if offset > 0 {
-            if let Err(err) = file.seek(SeekFrom::Start(offset)).await {
-                error!("failed to seek in file {}: {}", path.display(), err);
-                response.status(Status::InternalServerError);
-                return response.finalize();
-            }
-        }
-
-        if offset > 0 || length < size {
-            response.status(Status::PartialContent);
-        } else {
-            response.status(Status::Ok);
-        }
-
-        debug!("size {} len {} offset {}", size, length, offset);
-
-        response.sized_body(Some(length as usize), FileWrapper::from(file));
-    } else {
-        response.status(Status::NotFound);
+        Ok(response.finalize())
     }
-
-    response.finalize()
 }
 
 pub(crate) struct Range(String);
@@ -114,12 +127,10 @@ impl DerefMut for Range {
 }
 
 #[async_trait]
-impl<'a, 'r> FromRequest<'a, 'r> for Range {
+impl<'a, 'r> FromRequest<'r> for Range {
     type Error = MissingRangeHeaderError;
 
-    async fn from_request(
-        request: &'a rocket::Request<'r>,
-    ) -> rocket::request::Outcome<Self, Self::Error> {
+    async fn from_request(request: &'r rocket::Request<'_>) -> Outcome<Self, Self::Error> {
         let range = request.headers().get_one("Range").map(|s| s.to_owned());
 
         if let Some(range) = range {
@@ -137,7 +148,7 @@ pub(crate) struct MissingRangeHeaderError;
 // Only for resetting system idle timer on Drop
 // when the request has streamed what it needs to from the file.
 struct FileWrapper {
-    file: Pin<Box<File>>,
+    file: Pin<Box<AsyncFile>>,
 }
 
 impl From<File> for FileWrapper {
@@ -145,7 +156,7 @@ impl From<File> for FileWrapper {
         stop_system_idle_timer();
 
         Self {
-            file: Box::pin(file),
+            file: Box::pin(AsyncFile::from_std(file)),
         }
     }
 }

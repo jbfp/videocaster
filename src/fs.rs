@@ -36,7 +36,7 @@ pub(crate) async fn fallback() -> Redirect {
         "/".to_owned()
     };
 
-    Redirect::permanent(uri!(handler: path))
+    Redirect::permanent(uri!(handler(path)))
 }
 
 #[get("/fs?<path>")]

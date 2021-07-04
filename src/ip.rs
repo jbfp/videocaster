@@ -1,6 +1,5 @@
 use anyhow::Error;
-use rocket::response::Debug;
-use rocket_contrib::json::Json;
+use rocket::{response::Debug, serde::json::Json};
 use std::net::{IpAddr, UdpSocket};
 
 #[get("/ip")]

@@ -10,7 +10,6 @@ extern crate futures;
 #[macro_use]
 extern crate lazy_static;
 
-#[macro_use]
 extern crate log;
 
 #[macro_use]
@@ -30,14 +29,10 @@ use anyhow::Result;
 use directories_next::ProjectDirs;
 use futures::future;
 use log::LevelFilter;
-use rocket::{
-    figment::{
+use rocket::{Build, Config, Ignite, Rocket, Shutdown, figment::{
         providers::{Env, Format, Toml},
         Figment,
-    },
-    http::Method,
-    Config, Rocket, Shutdown,
-};
+    }, http::Method};
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 use std::path::{Path, PathBuf};
 use tokio::{io::AsyncWriteExt, process::Command};
@@ -49,7 +44,7 @@ const ENV_PREFIX: &str = "VIDEOCASTER_";
 async fn main() -> Result<()> {
     let config_path = create_config_file().await?;
     let _ = configure_logging();
-    let rocket = create_rocket(&config_path);
+    let rocket = create_rocket(&config_path).ignite().await?;
     let config = rocket.config().to_owned();
     let chrome = start_google_chrome(&config);
     let server = start_rocket(rocket);
@@ -72,7 +67,7 @@ async fn main() -> Result<()> {
 
 #[post("/shutdown")]
 pub(crate) async fn shutdown(shutdown: Shutdown) {
-    shutdown.shutdown()
+    shutdown.notify()
 }
 
 #[cfg(not(debug_assertions))]
@@ -87,7 +82,6 @@ fn configure_logging() -> Result<()> {
 }
 
 #[cfg(debug_assertions)]
-#[allow(clippy::clippy::unnecessary_wraps)] // maintain compatibility with fallible release version
 fn configure_logging() -> Result<()> {
     simple_logging::log_to_stderr(LevelFilter::Debug);
     Ok(())
@@ -117,12 +111,10 @@ async fn create_config_file() -> Result<PathBuf> {
     Ok(path)
 }
 
-fn create_rocket<P: AsRef<Path>>(config_path: P) -> Rocket {
+fn create_rocket<P: AsRef<Path>>(config_path: P) -> Rocket<Build> {
     let figment = Figment::from(Config::default())
         .merge(Toml::file(config_path).nested())
         .merge(Env::prefixed(ENV_PREFIX).global());
-
-    let rocket = rocket::custom(figment);
 
     let routes = routes![
         chromecast::subtitles::handler,
@@ -139,7 +131,8 @@ fn create_rocket<P: AsRef<Path>>(config_path: P) -> Rocket {
 
     let catchers = catchers![static_files::fallback];
 
-    let config = rocket.config();
+    let config = figment.extract::<Config>().expect("config");
+    let rocket = rocket::custom(figment);
     let port = config.port;
     let host = format!("http://localhost:{}", port);
     let cors = CorsOptions {
@@ -151,10 +144,13 @@ fn create_rocket<P: AsRef<Path>>(config_path: P) -> Rocket {
     .to_cors()
     .expect("CORS options are invalid");
 
-    rocket.mount("/", routes).register(catchers).attach(cors)
+    rocket
+        .mount("/", routes)
+        .register("/", catchers)
+        .attach(cors)
 }
 
-async fn start_rocket(rocket: Rocket) {
+async fn start_rocket(rocket: Rocket<Ignite>) {
     if let Err(e) = rocket.launch().await {
         error!("Rocket failed to launch: {}", e);
     }
