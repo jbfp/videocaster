@@ -1,5 +1,8 @@
 use packer::Packer;
-use rocket::{http::{ContentType, Status}, response::content::Custom};
+use rocket::{
+    http::{ContentType, Status},
+    response::content::Custom,
+};
 use std::path::PathBuf;
 
 #[derive(Packer)]

@@ -37,8 +37,7 @@ async fn open_file<P: AsRef<Path>>(path: &P) -> Result<File, Error> {
 }
 
 async fn file_size(file: &File) -> Result<u64, Error> {
-    file
-        .metadata()
+    file.metadata()
         .await
         .with_context(|| "failed to load metadata for file")
         .map(|md| md.len())

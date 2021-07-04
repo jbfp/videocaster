@@ -29,10 +29,14 @@ use anyhow::Result;
 use directories_next::ProjectDirs;
 use futures::future;
 use log::LevelFilter;
-use rocket::{Build, Config, Ignite, Rocket, Shutdown, figment::{
+use rocket::{
+    figment::{
         providers::{Env, Format, Toml},
         Figment,
-    }, http::Method};
+    },
+    http::Method,
+    Build, Config, Ignite, Rocket, Shutdown,
+};
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 use std::path::{Path, PathBuf};
 use tokio::{io::AsyncWriteExt, process::Command};

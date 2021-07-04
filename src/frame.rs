@@ -1,7 +1,7 @@
 use anyhow::Error;
 use rocket::{
     http::ContentType,
-    response::{Debug, content::Custom}
+    response::{content::Custom, Debug},
 };
 use tokio::process::Command;
 
@@ -18,7 +18,7 @@ async fn extract_jpeg(path: &str) -> Result<Vec<u8>, Error> {
         "-ss",          // seek to
         "00:00:30",     // 30 seconds
         "-i",           // set input to
-        path,          // the path of the video
+        path,           // the path of the video
         "-vframes",     // take n video frame
         "1",            // n = 1
         "-q:v",         // set output quality to
