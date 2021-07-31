@@ -46,6 +46,7 @@ const ENV_PREFIX: &str = "VIDEOCASTER_";
 
 #[rocket::main]
 async fn main() -> Result<()> {
+    color_backtrace::install();
     let config_path = create_config_file().await?;
     let _ = configure_logging();
     let rocket = create_rocket(&config_path).ignite().await?;
