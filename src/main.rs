@@ -1,19 +1,4 @@
-#![feature(decl_macro, proc_macro_hygiene)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
-#[macro_use]
-extern crate anyhow;
-
-#[macro_use]
-extern crate futures;
-
-#[macro_use]
-extern crate lazy_static;
-
-extern crate log;
-
-#[macro_use]
-extern crate rocket;
 
 mod app_result;
 mod bindings;
@@ -25,17 +10,18 @@ mod opensubs;
 mod static_files;
 mod subtitles;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use directories_next::ProjectDirs;
-use futures::future;
-use log::LevelFilter;
+use futures::{future, pin_mut};
+use log::{debug, error, info, warn, LevelFilter};
 use rocket::{
+    catchers,
     figment::{
         providers::{Env, Format, Toml},
         Figment,
     },
     http::Method,
-    Build, Config, Ignite, Rocket, Shutdown,
+    post, routes, Build, Config, Ignite, Rocket, Shutdown,
 };
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 use std::path::{Path, PathBuf};

@@ -1,7 +1,8 @@
 use super::{Subtitle, DEFAULT_LANG};
 use crate::opensubs;
 use anyhow::{Context, Error};
-use rocket::{response::Debug, serde::json::Json};
+use log::{debug, info};
+use rocket::{get, response::Debug, serde::json::Json};
 use std::{
     io::SeekFrom,
     path::{Path, PathBuf},

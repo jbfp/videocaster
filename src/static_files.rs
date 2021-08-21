@@ -1,5 +1,6 @@
 use packer::Packer;
 use rocket::{
+    catch, get,
     http::{ContentType, Status},
     response::content::Custom,
 };

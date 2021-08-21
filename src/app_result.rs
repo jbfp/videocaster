@@ -1,3 +1,4 @@
+use log::error;
 use rocket::{
     response::{Responder, Result as ResponseResult},
     serde::json::Json,

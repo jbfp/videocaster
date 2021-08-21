@@ -1,6 +1,8 @@
 // https://docs.rs/crate/actix-files/0.5.0/source/src/named.rs with modifications
 use super::range::HttpRange;
+use log::{debug, error, info, warn};
 use rocket::{
+    async_trait, get,
     http::{ContentType, Header, Status},
     request::{FromRequest, Outcome},
     response::{Responder, Result as RocketResult},

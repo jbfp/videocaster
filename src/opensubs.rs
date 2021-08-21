@@ -4,6 +4,8 @@ use crate::subtitles::Subtitle;
 use anyhow::Result;
 use bytes::Buf;
 use flate2::bufread::GzDecoder;
+use lazy_static::lazy_static;
+use log::{info, trace};
 use regex::Regex;
 use reqwest::{Client, ClientBuilder};
 use serde::Deserialize;

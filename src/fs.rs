@@ -1,7 +1,8 @@
 use crate::app_result::AppResult;
 use anyhow::Error;
 use directories_next::UserDirs;
-use rocket::response::Redirect;
+use log::{debug, error, info, trace, warn};
+use rocket::{get, response::Redirect, uri};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 use tokio::fs::{self, DirEntry};

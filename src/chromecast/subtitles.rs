@@ -1,7 +1,10 @@
 use crate::opensubs;
 use anyhow::Error;
-use rocket::http::ContentType;
-use rocket::response::{content::Custom, Debug};
+use rocket::{
+    get,
+    http::ContentType,
+    response::{content::Custom, Debug},
+};
 
 #[get("/subtitles/download/<url>")]
 pub(crate) async fn handler(url: &str) -> Result<Custom<String>, Debug<Error>> {

@@ -1,5 +1,7 @@
-use anyhow::Error;
+use anyhow::{anyhow, Error};
+use log::debug;
 use rocket::{
+    get,
     http::ContentType,
     response::{content::Custom, Debug},
 };
