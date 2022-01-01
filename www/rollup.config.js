@@ -22,6 +22,8 @@ export default {
     },
     plugins: [
         replace({
+            preventAssignment: true,
+
             // \\ on Windows, / on sane systems
             __sep: os.platform() === "win32" ? '\\\\' : '/',
         }),
