@@ -162,11 +162,7 @@ async fn start_google_chrome(config: &Config) {
         Command::new("google-chrome")
     }
 
-    let app = {
-        let port = config.port;
-        let url = format!("http://localhost:{}", port);
-        format!("--app={}", url)
-    };
+    let url = format!("http://localhost:{}", config.port);
 
     let user_data_dir = {
         if let Some(dirs) = open_project_dirs() {
@@ -179,7 +175,7 @@ async fn start_google_chrome(config: &Config) {
         }
     };
 
-    let args = [&app, &user_data_dir, "--no-default-browser-check"];
+    let args = [&url, &user_data_dir, "--no-default-browser-check"];
 
     debug!("chrome args: {:#?}", args);
 
