@@ -80,7 +80,7 @@ fn srt_to_vtt(srt: &str) -> String {
 
         // replace , in timestamps with .
         if TIME_FRAME_REGEX.is_match(line) {
-            vtt.push_str(&line.replace(",", "."))
+            vtt.push_str(&line.replace(',', "."))
         } else {
             vtt.push_str(line)
         }

@@ -52,17 +52,15 @@ impl<'r> Responder<'r, 'r> for VideoResponder {
                 warn!("file {} does not have an extension", path.display());
             }
 
-            let size;
-
-            match file.metadata() {
-                Ok(metadata) => size = metadata.len(),
+            let size = match file.metadata() {
+                Ok(metadata) => metadata.len(),
                 Err(err) => {
                     let path = path.display();
                     error!("failed to get metadata for file {}: {}", path, err);
                     response.status(Status::InternalServerError);
                     return Ok(response.finalize());
                 }
-            }
+            };
 
             let mut length = size;
             let mut offset = 0;
