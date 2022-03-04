@@ -18,4 +18,4 @@ cargo build --release --locked
 mkdir -p dpkg/usr/local/bin
 cp target/release/videocaster dpkg/usr/local/bin
 dpkg-deb --build dpkg
-mv dpkg.deb videocaster_1.1.0.deb
+mv dpkg.deb videocaster_1.2.0.deb
