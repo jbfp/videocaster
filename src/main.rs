@@ -1,7 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod app_result;
-mod bindings;
 mod chromecast;
 mod frame;
 mod fs;
