@@ -20,7 +20,7 @@ packer = "=0.5.3"
 packer_derive = "=0.5.3"
 percent-encoding = "2.1.0"
 pretty_env_logger = "0.4.0"
-regex = "1.5.4"
+regex = "1.5.5"
 reqwest = { version = "0.11.8", features = ["json"] }
 rocket = { version = "0.5.0-rc.1", features = ["json"] }
 rocket_cors = { git = "https://github.com/lawliet89/rocket_cors", branch = "master", default_features = false }
